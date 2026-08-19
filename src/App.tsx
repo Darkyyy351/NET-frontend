@@ -837,7 +837,7 @@ export default function App() {
               <SettingsCard
                 icon={CheckCircle2}
                 title="Readiness Checklist"
-                items={["Backend API stable", "Frontend Docker export pending", "ESP telemetry pending", "CM5 deploy pending"]}
+                items={["Backend API stable", "Frontend Docker image prepared", "ESP telemetry pending", "CM5 deploy pending"]}
               />
               <SettingsCard
                 icon={Cable}

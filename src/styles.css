@@ -323,6 +323,11 @@ button:disabled {
   border-color: #334155;
 }
 
+.v4-device-card.menu-open {
+  z-index: 40;
+  transform: none;
+}
+
 .card-topline,
 .device-title-row,
 .card-footer,
@@ -1511,8 +1516,7 @@ button:disabled {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.68);
 }
 
 .menu-backdrop {

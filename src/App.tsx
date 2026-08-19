@@ -500,7 +500,10 @@ export default function App() {
                   const statusClass = deviceStatusClass(device.status);
 
                   return (
-                    <article className="v4-device-card" key={device.id}>
+                    <article
+                      className={`v4-device-card ${activeMenuId === device.id ? "menu-open" : ""}`}
+                      key={device.id}
+                    >
                       <div>
                         <div className="card-topline">
                           <div className="device-title-row">
@@ -882,7 +885,13 @@ export default function App() {
         </section>
       )}
       {devicePendingRemoval && (
-        <section className="delete-device-modal" role="dialog" aria-modal="true" aria-labelledby="delete-device-title">
+        <section
+          className="delete-device-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-device-title"
+          aria-busy={deleteState === "deleting"}
+        >
           <div className="delete-device-icon">
             <Trash2 size={18} />
           </div>

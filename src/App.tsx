@@ -36,6 +36,10 @@ import { getApiBaseUrl, getApiToken, saveApiConfig } from "./api/axios";
 import "./styles.css";
 
 type View = "dashboard" | "monitoring" | "logs" | "security" | "settings";
+type CommandFeedback = {
+  state: "sending" | "queued" | "failed";
+  label: string;
+};
 
 const viewItems: Array<{ id: View; label: string; icon: typeof Grid3X3 }> = [
   { id: "dashboard", label: "Dashboard", icon: Grid3X3 },
@@ -193,6 +197,7 @@ export default function App() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [eventLogs, setEventLogs] = useState<EventLog[]>(fallbackLogs);
+  const [commandFeedback, setCommandFeedback] = useState<Record<string, CommandFeedback>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiBaseUrl, setApiBaseUrl] = useState(() => getApiBaseUrl());
@@ -288,12 +293,33 @@ export default function App() {
   };
 
   const runCommand = async (device: Device, type: "blink" | "reboot") => {
-    await queueCommand(device.id, {
-      type,
-      payload: type === "blink" ? { times: 2 } : {},
-    });
-    setActiveMenuId(null);
-    await refreshAll();
+    const label = type === "blink" ? "Identify" : "Reboot";
+
+    setCommandFeedback((current) => ({
+      ...current,
+      [device.id]: { state: "sending", label: `${label} sending...` },
+    }));
+
+    try {
+      await queueCommand(device.id, {
+        type,
+        payload: type === "blink" ? { times: 2 } : {},
+      });
+
+      setCommandFeedback((current) => ({
+        ...current,
+        [device.id]: { state: "queued", label: `${label} queued` },
+      }));
+      setActiveMenuId(null);
+      setDevices(await getDevices());
+      await Promise.all([loadSystemStatus(), loadLogs()]);
+    } catch (err) {
+      console.error("Error queueing command", err);
+      setCommandFeedback((current) => ({
+        ...current,
+        [device.id]: { state: "failed", label: `${label} failed` },
+      }));
+    }
   };
 
   const removeDevice = async (device: Device) => {
@@ -386,75 +412,87 @@ export default function App() {
 
             {!loading && !error && filteredDevices.length > 0 && (
               <div className="v4-device-grid">
-                {filteredDevices.map((device) => (
-                  <article className="v4-device-card" key={device.id}>
-                    <div>
-                      <div className="card-topline">
-                        <div className="device-title-row">
-                          <div className={`device-icon ${device.status === "online" ? "online" : "offline"}`}>
-                            <Cpu size={16} />
+                {filteredDevices.map((device) => {
+                  const feedback = commandFeedback[device.id];
+                  const isSending = feedback?.state === "sending";
+
+                  return (
+                    <article className="v4-device-card" key={device.id}>
+                      <div>
+                        <div className="card-topline">
+                          <div className="device-title-row">
+                            <div className={`device-icon ${device.status === "online" ? "online" : "offline"}`}>
+                              <Cpu size={16} />
+                            </div>
+                            <div>
+                              <h2>{device.name}</h2>
+                              <span className="device-type">{device.type || "ESP"}</span>
+                            </div>
+                          </div>
+
+                          <div className="menu-wrap">
+                            <button
+                              className="icon-button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActiveMenuId(activeMenuId === device.id ? null : device.id);
+                              }}
+                              type="button"
+                              aria-label={`Open ${device.name} menu`}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+
+                            {activeMenuId === device.id && (
+                              <div className="card-menu">
+                                <button onClick={() => removeDevice(device)} type="button">
+                                  <Trash2 size={13} />
+                                  Remove
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="device-card-data">
+                          <div>
+                            <span>IP Adresa:</span>
+                            <strong>{device.ip || "Unknown"}</strong>
                           </div>
                           <div>
-                            <h2>{device.name}</h2>
-                            <span className="device-type">{device.type || "ESP"}</span>
+                            <span>Signal strength:</span>
+                            <strong>
+                              <Wifi size={13} className={device.status === "online" ? "signal-on" : "signal-off"} />
+                              N/A
+                            </strong>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="menu-wrap">
-                          <button
-                            className="icon-button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setActiveMenuId(activeMenuId === device.id ? null : device.id);
-                            }}
-                            type="button"
-                            aria-label={`Open ${device.name} menu`}
-                          >
-                            <MoreVertical size={16} />
+                      <div className="card-footer">
+                        <span className="status-line">
+                          <i className={device.status === "online" ? "online" : "offline"} />
+                          <strong className={device.status === "online" ? "online" : "offline"}>{device.status}</strong>
+                        </span>
+                        <div className="card-actions">
+                          <button disabled={isSending} onClick={() => runCommand(device, "reboot")} type="button">
+                            Reboot
                           </button>
-
-                          {activeMenuId === device.id && (
-                            <div className="card-menu">
-                              <button onClick={() => removeDevice(device)} type="button">
-                                <Trash2 size={13} />
-                                Remove
-                              </button>
-                            </div>
-                          )}
+                          <button
+                            className="blue"
+                            disabled={isSending}
+                            onClick={() => runCommand(device, "blink")}
+                            type="button"
+                          >
+                            Identify
+                          </button>
                         </div>
                       </div>
 
-                      <div className="device-card-data">
-                        <div>
-                          <span>IP Adresa:</span>
-                          <strong>{device.ip || "Unknown"}</strong>
-                        </div>
-                        <div>
-                          <span>Signal strength:</span>
-                          <strong>
-                            <Wifi size={13} className={device.status === "online" ? "signal-on" : "signal-off"} />
-                            N/A
-                          </strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="card-footer">
-                      <span className="status-line">
-                        <i className={device.status === "online" ? "online" : "offline"} />
-                        <strong className={device.status === "online" ? "online" : "offline"}>{device.status}</strong>
-                      </span>
-                      <div className="card-actions">
-                        <button onClick={() => runCommand(device, "reboot")} type="button">
-                          Reboot
-                        </button>
-                        <button className="blue" onClick={() => runCommand(device, "blink")} type="button">
-                          Identify
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+                      {feedback && <div className={`command-feedback ${feedback.state}`}>{feedback.label}</div>}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>

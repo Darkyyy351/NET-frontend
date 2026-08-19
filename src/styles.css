@@ -545,6 +545,35 @@ button:disabled {
   background: rgba(59, 130, 246, 0.18);
 }
 
+.command-feedback {
+  min-height: 28px;
+  margin-top: 10px;
+  padding: 7px 9px;
+  border: 1px solid rgba(30, 41, 59, 0.74);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.42);
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.command-feedback.sending {
+  border-color: rgba(59, 130, 246, 0.28);
+  color: #60a5fa;
+}
+
+.command-feedback.queued {
+  border-color: rgba(16, 185, 129, 0.28);
+  color: #34d399;
+}
+
+.command-feedback.failed {
+  border-color: rgba(244, 63, 94, 0.32);
+  color: #fb7185;
+}
+
 .telemetry-panel,
 .table-panel,
 .config-panel,

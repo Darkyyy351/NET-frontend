@@ -34,7 +34,7 @@ export async function getDevices(): Promise<Device[]> {
   return res.data.data;
 }
 
-export async function addDevice(device: { name: string; ip?: string; type?: string }) {
+export async function addDevice(device: { name: string; ip: string; type: string }) {
   const res = await api.post<ApiResponse<Device>>("/devices", device);
   return res.data.data;
 }

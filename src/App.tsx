@@ -103,7 +103,7 @@ const monitoringModules = [
 const securityModules = [
   { title: "API token vault", text: "Rotate dashboard and ESP tokens from a controlled admin flow.", icon: KeyRound },
   { title: "Device enrollment policy", text: "Allowlist new ESP nodes before they can receive commands.", icon: Shield },
-  { title: "Audit trail", text: "Who sent reboot/blink commands and when the device acknowledged them.", icon: FileText },
+  { title: "Audit trail", text: "Who sent reboot/identify commands and when the device acknowledged them.", icon: FileText },
   { title: "Network exposure check", text: "Warn if the API is reachable outside the trusted LAN/VPN.", icon: Eye },
 ];
 
@@ -449,7 +449,7 @@ export default function App() {
                           Reboot
                         </button>
                         <button className="blue" onClick={() => runCommand(device, "blink")} type="button">
-                          Blink
+                          Identify
                         </button>
                       </div>
                     </div>

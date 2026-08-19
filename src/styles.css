@@ -833,6 +833,26 @@ button:disabled {
   background: #1e293b;
 }
 
+.log-line i.device,
+.log-line i.heartbeat {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.log-line i.auth,
+.log-line i.warn {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.log-line i.error {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+}
+
 .log-line p {
   margin: 0;
   color: #cbd5e1;

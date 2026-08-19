@@ -30,18 +30,12 @@ import {
 } from "lucide-react";
 import { AddDevicePanel } from "./components/AddDevicePanel";
 import { deleteDevice, getDevices, queueCommand, type Device } from "./api/devices";
+import { getLogs, type EventLog } from "./api/logs";
 import { getHealthStatus, getSystemStatus, type SystemService, type SystemStatus } from "./api/system";
 import { getApiBaseUrl, getApiToken, saveApiConfig } from "./api/axios";
 import "./styles.css";
 
 type View = "dashboard" | "monitoring" | "logs" | "security" | "settings";
-
-interface LogLine {
-  id: number;
-  time: string;
-  type: "cmd" | "conn" | "sys";
-  msg: string;
-}
 
 const viewItems: Array<{ id: View; label: string; icon: typeof Grid3X3 }> = [
   { id: "dashboard", label: "Dashboard", icon: Grid3X3 },
@@ -51,10 +45,31 @@ const viewItems: Array<{ id: View; label: string; icon: typeof Grid3X3 }> = [
   { id: "settings", label: "Nastaveni", icon: Settings },
 ];
 
-const logs: LogLine[] = [
-  { id: 1, time: "20:45:12", type: "cmd", msg: "Core accepted queued command packet for device control" },
-  { id: 2, time: "20:42:04", type: "conn", msg: "ESP node authorized through NET bearer token" },
-  { id: 3, time: "20:15:00", type: "sys", msg: "CM5 Core health endpoint reported stable uptime" },
+const fallbackLogs: EventLog[] = [
+  {
+    id: "fallback-cmd",
+    time: new Date().toISOString(),
+    type: "cmd",
+    level: "info",
+    message: "Core accepted queued command packet for device control",
+    meta: null,
+  },
+  {
+    id: "fallback-auth",
+    time: new Date().toISOString(),
+    type: "auth",
+    level: "info",
+    message: "ESP node authorized through NET bearer token",
+    meta: null,
+  },
+  {
+    id: "fallback-sys",
+    time: new Date().toISOString(),
+    type: "sys",
+    level: "info",
+    message: "CM5 Core health endpoint reported stable uptime",
+    meta: null,
+  },
 ];
 
 const fallbackServiceStatuses: SystemService[] = [
@@ -101,6 +116,26 @@ function formatLastSeen(value: string | null) {
     dateStyle: "short",
     timeStyle: "medium",
   }).format(new Date(value));
+}
+
+function formatLogTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(value));
+}
+
+function logClass(log: EventLog) {
+  if (log.level === "error") {
+    return "error";
+  }
+
+  if (log.level === "warn") {
+    return "warn";
+  }
+
+  return log.type;
 }
 
 function nodeUptime(device: Device) {
@@ -157,6 +192,7 @@ export default function App() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [eventLogs, setEventLogs] = useState<EventLog[]>(fallbackLogs);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiBaseUrl, setApiBaseUrl] = useState(() => getApiBaseUrl());
@@ -187,8 +223,17 @@ export default function App() {
     }
   };
 
+  const loadLogs = async () => {
+    try {
+      setEventLogs(await getLogs(100));
+    } catch (err) {
+      console.warn("Logs endpoint unavailable", err);
+      setEventLogs(fallbackLogs);
+    }
+  };
+
   const refreshAll = async () => {
-    await Promise.all([loadDevices(), loadSystemStatus()]);
+    await Promise.all([loadDevices(), loadSystemStatus(), loadLogs()]);
   };
 
   useEffect(() => {
@@ -494,6 +539,10 @@ export default function App() {
                 <h1>Systemovy Event Stream</h1>
                 <p>Chronologicky prehled o deni v siti, prikazech a sitovych stavech.</p>
               </div>
+              <button className="ghost-action" onClick={loadLogs} type="button">
+                <RefreshCw size={14} />
+                Refresh
+              </button>
             </div>
 
             <div className="log-panel">
@@ -502,11 +551,11 @@ export default function App() {
                 <em>STREAMING</em>
               </div>
               <div className="log-lines">
-                {logs.map((log) => (
+                {eventLogs.map((log) => (
                   <div className="log-line" key={log.id}>
-                    <span>[{log.time}]</span>
-                    <i className={log.type}>{log.type}</i>
-                    <p>{log.msg}</p>
+                    <span>[{formatLogTime(log.time)}]</span>
+                    <i className={logClass(log)}>{log.type}</i>
+                    <p>{log.message}</p>
                   </div>
                 ))}
               </div>

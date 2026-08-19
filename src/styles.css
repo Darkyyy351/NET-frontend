@@ -547,6 +547,7 @@ button:disabled {
 
 .telemetry-panel,
 .table-panel,
+.config-panel,
 .security-card,
 .danger-panel,
 .services-panel,
@@ -557,6 +558,7 @@ button:disabled {
 }
 
 .telemetry-panel,
+.config-panel,
 .security-card,
 .danger-panel,
 .services-panel,
@@ -565,10 +567,13 @@ button:disabled {
 }
 
 .telemetry-panel h3,
+.config-panel h3,
 .security-card h3,
 .danger-panel h3,
 .services-panel h3,
 .settings-card h3 {
+  display: flex;
+  align-items: center;
   gap: 8px;
   margin: 0 0 16px;
   color: #60a5fa;
@@ -1001,6 +1006,17 @@ button:disabled {
   min-height: 38px;
   color: #cbd5e1;
   background: #111827;
+}
+
+.config-actions button.primary {
+  color: #ffffff;
+  border: 1px solid rgba(59, 130, 246, 0.34);
+  background: #2563eb;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
+}
+
+.config-actions button.primary:hover {
+  background: #3b82f6;
 }
 
 .config-actions button:last-child {

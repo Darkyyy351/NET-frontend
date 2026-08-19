@@ -652,7 +652,7 @@ export default function App() {
                   <span>{connectionMessage}</span>
                 </div>
                 <div className="config-actions">
-                  <button onClick={saveConnectionConfig} type="button">
+                  <button className="primary" onClick={saveConnectionConfig} type="button">
                     Save Config
                   </button>
                   <button disabled={connectionState === "testing"} onClick={testConnection} type="button">

@@ -17,6 +17,9 @@ VITE_NET_API_URL=http://localhost:3000/api/v1
 VITE_NET_API_TOKEN=change-me-to-the-backend-api-token
 ```
 
+You can override both values in the dashboard under `Settings -> Frontend API Connection`.
+Those runtime values are stored in browser `localStorage`, so local testing and CM5/LAN testing do not require rebuilding the frontend after every API URL change.
+
 ## Production Build
 
 ```bash

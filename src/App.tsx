@@ -30,7 +30,8 @@ import {
 } from "lucide-react";
 import { AddDevicePanel } from "./components/AddDevicePanel";
 import { deleteDevice, getDevices, queueCommand, type Device } from "./api/devices";
-import { getSystemStatus, type SystemService, type SystemStatus } from "./api/system";
+import { getHealthStatus, getSystemStatus, type SystemService, type SystemStatus } from "./api/system";
+import { getApiBaseUrl, getApiToken, saveApiConfig } from "./api/axios";
 import "./styles.css";
 
 type View = "dashboard" | "monitoring" | "logs" | "security" | "settings";
@@ -158,6 +159,10 @@ export default function App() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => getApiBaseUrl());
+  const [apiToken, setApiToken] = useState(() => getApiToken());
+  const [connectionState, setConnectionState] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [connectionMessage, setConnectionMessage] = useState("Runtime config is loaded from this browser.");
 
   const loadDevices = async () => {
     setLoading(true);
@@ -209,6 +214,33 @@ export default function App() {
   const onlineCount = devices.filter((device) => device.status === "online").length;
   const offlineCount = devices.length - onlineCount;
   const visibleServiceStatuses = systemStatus?.services || fallbackServiceStatuses;
+
+  const saveConnectionConfig = async () => {
+    saveApiConfig({ baseUrl: apiBaseUrl, token: apiToken });
+    setConnectionState("idle");
+    setConnectionMessage("API config saved in this browser.");
+    await refreshAll();
+  };
+
+  const testConnection = async () => {
+    saveApiConfig({ baseUrl: apiBaseUrl, token: apiToken });
+    setConnectionState("testing");
+    setConnectionMessage("Testing health and authorized system status endpoints...");
+
+    try {
+      const [health, status] = await Promise.all([getHealthStatus(), getSystemStatus()]);
+
+      setSystemStatus(status);
+      setConnectionState("success");
+      setConnectionMessage(`Connected to ${health.status}. Backend uptime ${formatUptime(health.uptime)}.`);
+      await loadDevices();
+    } catch (err) {
+      console.error("Connection test failed", err);
+      setSystemStatus(null);
+      setConnectionState("error");
+      setConnectionMessage("Connection failed. Check API URL, CORS and bearer token.");
+    }
+  };
 
   const runCommand = async (device: Device, type: "blink" | "reboot") => {
     await queueCommand(device.id, {
@@ -542,6 +574,45 @@ export default function App() {
             </div>
 
             <div className="settings-grid">
+              <div className="config-panel">
+                <h3>
+                  <KeyRound size={15} />
+                  Frontend API Connection
+                </h3>
+                <div className="config-form">
+                  <label>
+                    API Base URL
+                    <input
+                      value={apiBaseUrl}
+                      onChange={(event) => setApiBaseUrl(event.target.value)}
+                      placeholder="http://localhost:3000/api/v1"
+                      type="url"
+                    />
+                  </label>
+                  <label>
+                    Bearer Token
+                    <input
+                      value={apiToken}
+                      onChange={(event) => setApiToken(event.target.value)}
+                      placeholder="Backend API token"
+                      type="password"
+                    />
+                  </label>
+                </div>
+                <div className={`connection-state ${connectionState}`}>
+                  <span>{connectionMessage}</span>
+                </div>
+                <div className="config-actions">
+                  <button onClick={saveConnectionConfig} type="button">
+                    Save Config
+                  </button>
+                  <button disabled={connectionState === "testing"} onClick={testConnection} type="button">
+                    <Activity size={13} />
+                    Test Connection
+                  </button>
+                </div>
+              </div>
+
               <div className="danger-panel">
                 <h3>
                   <AlertTriangle size={15} />

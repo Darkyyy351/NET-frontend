@@ -31,6 +31,18 @@ export interface SystemStatus {
   services: SystemService[];
 }
 
+export interface HealthStatus {
+  success: boolean;
+  status: string;
+  uptime: number;
+  timestamp: string;
+}
+
+export async function getHealthStatus(): Promise<HealthStatus> {
+  const res = await api.get<HealthStatus>("/health");
+  return res.data;
+}
+
 export async function getSystemStatus(): Promise<SystemStatus> {
   const res = await api.get<ApiResponse<SystemStatus>>("/system/status");
   return res.data.data;

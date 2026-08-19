@@ -884,7 +884,7 @@ button:disabled {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -897,10 +897,96 @@ button:disabled {
   box-shadow: 0 16px 40px rgba(127, 29, 29, 0.06);
 }
 
+.config-panel h3,
 .danger-panel h3 {
-  color: #fb7185;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+}
+
+.config-panel h3 {
+  color: #60a5fa;
+}
+
+.danger-panel h3 {
+  color: #fb7185;
+}
+
+.config-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.config-form label {
+  display: grid;
+  gap: 7px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.config-form input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  outline: none;
+  background: rgba(2, 6, 23, 0.42);
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.config-form input:focus {
+  border-color: rgba(59, 130, 246, 0.7);
+}
+
+.connection-state {
+  margin-top: 12px;
+  min-height: 34px;
+  padding: 9px 10px;
+  border: 1px solid rgba(30, 41, 59, 0.76);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.38);
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.connection-state.success {
+  border-color: rgba(16, 185, 129, 0.28);
+  color: #34d399;
+}
+
+.connection-state.error {
+  border-color: rgba(244, 63, 94, 0.32);
+  color: #fb7185;
+}
+
+.connection-state.testing {
+  border-color: rgba(59, 130, 246, 0.32);
+  color: #60a5fa;
+}
+
+.config-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.config-actions button {
+  min-height: 38px;
+  color: #cbd5e1;
+  background: #111827;
+}
+
+.config-actions button:last-child {
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .danger-panel p {
@@ -1207,6 +1293,7 @@ button:disabled {
   }
 
   .card-actions,
+  .config-actions,
   .settings-actions {
     width: 100%;
     grid-template-columns: 1fr;

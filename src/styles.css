@@ -671,6 +671,91 @@ button:disabled {
   transform: translate(-50%, -50%);
 }
 
+.delete-device-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 60;
+  width: min(420px, calc(100vw - 32px));
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  border-radius: 14px;
+  background: #0b0f19;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -50%);
+}
+
+.delete-device-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(244, 63, 94, 0.1);
+  color: #fb7185;
+}
+
+.delete-device-modal h3 {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 16px;
+}
+
+.delete-device-modal p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.delete-device-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.secondary-button,
+.danger-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.secondary-button {
+  border: 1px solid #334155;
+  background: #111827;
+  color: #cbd5e1;
+}
+
+.danger-button {
+  border: 1px solid #e11d48;
+  background: #e11d48;
+  color: #ffffff;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #f43f5e;
+}
+
+.secondary-button:disabled,
+.danger-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .detail-header {
   display: flex;
   align-items: flex-start;

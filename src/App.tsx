@@ -212,6 +212,8 @@ export default function App() {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [devicePendingRemoval, setDevicePendingRemoval] = useState<Device | null>(null);
+  const [deleteState, setDeleteState] = useState<"idle" | "deleting" | "error">("idle");
   const [devices, setDevices] = useState<Device[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [eventLogs, setEventLogs] = useState<EventLog[]>(fallbackLogs);
@@ -377,10 +379,29 @@ export default function App() {
     }
   };
 
-  const removeDevice = async (device: Device) => {
-    await deleteDevice(device.id);
+  const requestDeviceRemoval = (device: Device) => {
     setActiveMenuId(null);
-    await refreshAll();
+    setDeleteState("idle");
+    setDevicePendingRemoval(device);
+  };
+
+  const removeDevice = async () => {
+    if (!devicePendingRemoval || deleteState === "deleting") {
+      return;
+    }
+
+    setDeleteState("deleting");
+
+    try {
+      await deleteDevice(devicePendingRemoval.id);
+      setDevices((current) => current.filter((device) => device.id !== devicePendingRemoval.id));
+      setDevicePendingRemoval(null);
+      setDeleteState("idle");
+      await Promise.all([loadLogs(), loadSystemStatus()]);
+    } catch (err) {
+      console.error("Error removing device", err);
+      setDeleteState("error");
+    }
   };
 
   const openDeviceDetail = (device: Device) => {
@@ -516,7 +537,7 @@ export default function App() {
 
                               {activeMenuId === device.id && (
                                 <div className="card-menu">
-                                  <button onClick={() => removeDevice(device)} type="button">
+                                  <button onClick={() => requestDeviceRemoval(device)} type="button">
                                     <Trash2 size={13} />
                                     Remove
                                   </button>
@@ -860,8 +881,41 @@ export default function App() {
           </div>
         </section>
       )}
+      {devicePendingRemoval && (
+        <section className="delete-device-modal" role="dialog" aria-modal="true" aria-labelledby="delete-device-title">
+          <div className="delete-device-icon">
+            <Trash2 size={18} />
+          </div>
+          <div>
+            <h3 id="delete-device-title">Remove {devicePendingRemoval.name}?</h3>
+            <p>The device will be removed from NET Core. This action will be recorded in the event log.</p>
+          </div>
+
+          {deleteState === "error" && (
+            <div className="panel-error">Device could not be removed. Check the backend connection and try again.</div>
+          )}
+
+          <div className="delete-device-actions">
+            <button
+              className="secondary-button"
+              disabled={deleteState === "deleting"}
+              onClick={() => setDevicePendingRemoval(null)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button className="danger-button" disabled={deleteState === "deleting"} onClick={removeDevice} type="button">
+              <Trash2 size={14} />
+              {deleteState === "deleting" ? "Removing..." : "Remove device"}
+            </button>
+          </div>
+        </section>
+      )}
       {isPanelOpen && <div className="backdrop" onClick={() => setIsPanelOpen(false)} />}
       {selectedDevice && <div className="backdrop" onClick={() => setSelectedDevice(null)} />}
+      {devicePendingRemoval && deleteState !== "deleting" && (
+        <div className="backdrop" onClick={() => setDevicePendingRemoval(null)} />
+      )}
       {activeMenuId && <div className="menu-backdrop" onClick={() => setActiveMenuId(null)} />}
     </div>
   );

@@ -1,0 +1,11 @@
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_NET_API_URL: ${VITE_NET_API_URL:-http://localhost:3000/api/v1}
+        VITE_NET_API_TOKEN: ${VITE_NET_API_TOKEN:-}
+    container_name: net-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"

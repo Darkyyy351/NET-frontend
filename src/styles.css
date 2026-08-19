@@ -343,6 +343,30 @@ button:disabled {
   gap: 14px;
 }
 
+.card-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.details-button {
+  min-height: 28px;
+  padding: 6px 9px;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.06);
+  color: #93c5fd;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.details-button:hover {
+  background: rgba(59, 130, 246, 0.13);
+  color: #bfdbfe;
+}
+
 .device-title-row {
   gap: 10px;
 }

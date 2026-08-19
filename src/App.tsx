@@ -497,27 +497,32 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="menu-wrap">
-                            <button
-                              className="icon-button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setActiveMenuId(activeMenuId === device.id ? null : device.id);
-                              }}
-                              type="button"
-                              aria-label={`Open ${device.name} menu`}
-                            >
-                              <MoreVertical size={16} />
+                          <div className="card-top-actions">
+                            <button className="details-button" onClick={() => openDeviceDetail(device)} type="button">
+                              Details
                             </button>
+                            <div className="menu-wrap">
+                              <button
+                                className="icon-button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setActiveMenuId(activeMenuId === device.id ? null : device.id);
+                                }}
+                                type="button"
+                                aria-label={`Open ${device.name} menu`}
+                              >
+                                <MoreVertical size={16} />
+                              </button>
 
-                            {activeMenuId === device.id && (
-                              <div className="card-menu">
-                                <button onClick={() => removeDevice(device)} type="button">
-                                  <Trash2 size={13} />
-                                  Remove
-                                </button>
-                              </div>
-                            )}
+                              {activeMenuId === device.id && (
+                                <div className="card-menu">
+                                  <button onClick={() => removeDevice(device)} type="button">
+                                    <Trash2 size={13} />
+                                    Remove
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -542,9 +547,6 @@ export default function App() {
                           <strong className={statusClass}>{device.status}</strong>
                         </span>
                         <div className="card-actions">
-                          <button onClick={() => openDeviceDetail(device)} type="button">
-                            Open
-                          </button>
                           <button disabled={isSending} onClick={() => runCommand(device, "reboot")} type="button">
                             Reboot
                           </button>

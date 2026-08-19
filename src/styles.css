@@ -365,6 +365,11 @@ button:disabled {
   color: #fb7185;
 }
 
+.device-icon.unknown {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
 .v4-device-card h2 {
   margin: 0;
   color: #e2e8f0;
@@ -375,8 +380,16 @@ button:disabled {
   color: #60a5fa;
 }
 
+.device-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
 .device-type {
-  display: inline-block;
+  display: inline-flex;
   margin-top: 4px;
   padding: 2px 6px;
   border-radius: 6px;
@@ -387,6 +400,33 @@ button:disabled {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.card-status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card-status-chip.online {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.card-status-chip.offline {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.1);
+}
+
+.card-status-chip.unknown {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .menu-wrap {
@@ -499,12 +539,20 @@ button:disabled {
   background: #f43f5e;
 }
 
+.status-line i.unknown {
+  background: #f59e0b;
+}
+
 .status-line strong.online {
   color: #34d399;
 }
 
 .status-line strong.offline {
   color: #fb7185;
+}
+
+.status-line strong.unknown {
+  color: #f59e0b;
 }
 
 .card-actions {
@@ -569,9 +617,80 @@ button:disabled {
   color: #34d399;
 }
 
+.command-feedback.waiting {
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #f59e0b;
+}
+
+.command-feedback.success {
+  border-color: rgba(16, 185, 129, 0.34);
+  background: rgba(16, 185, 129, 0.08);
+  color: #6ee7b7;
+}
+
 .command-feedback.failed {
   border-color: rgba(244, 63, 94, 0.32);
   color: #fb7185;
+}
+
+.device-detail-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 60;
+  width: min(520px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  background: #0b0f19;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -50%);
+}
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.62);
+}
+
+.detail-header h3 {
+  margin: 8px 0 0;
+  color: #e2e8f0;
+  font-size: 18px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.detail-item {
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border: 1px solid rgba(30, 41, 59, 0.62);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.detail-item span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.detail-item strong {
+  overflow-wrap: anywhere;
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
 }
 
 .telemetry-panel,
@@ -1359,6 +1478,7 @@ button:disabled {
 
   .card-actions,
   .config-actions,
+  .detail-grid,
   .settings-actions {
     width: 100%;
     grid-template-columns: 1fr;

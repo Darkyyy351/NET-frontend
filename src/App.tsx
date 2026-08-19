@@ -26,10 +26,11 @@ import {
   Trash2,
   Wifi,
   Wrench,
+  X,
   Zap,
 } from "lucide-react";
 import { AddDevicePanel } from "./components/AddDevicePanel";
-import { deleteDevice, getDevices, queueCommand, type Device } from "./api/devices";
+import { deleteDevice, getDeviceCommands, getDevices, queueCommand, type Device } from "./api/devices";
 import { getLogs, type EventLog } from "./api/logs";
 import { getHealthStatus, getSystemStatus, type SystemService, type SystemStatus } from "./api/system";
 import { getApiBaseUrl, getApiToken, saveApiConfig } from "./api/axios";
@@ -37,7 +38,7 @@ import "./styles.css";
 
 type View = "dashboard" | "monitoring" | "logs" | "security" | "settings";
 type CommandFeedback = {
-  state: "sending" | "queued" | "failed";
+  state: "sending" | "queued" | "waiting" | "success" | "failed";
   label: string;
 };
 
@@ -154,6 +155,18 @@ function pingLabel(device: Device) {
   return device.status === "online" ? "< 50ms" : "--";
 }
 
+function deviceStatusClass(status: string) {
+  if (status === "online") {
+    return "online";
+  }
+
+  if (status === "offline") {
+    return "offline";
+  }
+
+  return "unknown";
+}
+
 function serviceIcon(serviceId: string) {
   if (serviceId === "backend-api") {
     return Server;
@@ -189,11 +202,16 @@ function formatUptime(seconds?: number) {
   return `${hours}h ${minutes}m`;
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [eventLogs, setEventLogs] = useState<EventLog[]>(fallbackLogs);
@@ -301,7 +319,7 @@ export default function App() {
     }));
 
     try {
-      await queueCommand(device.id, {
+      const command = await queueCommand(device.id, {
         type,
         payload: type === "blink" ? { times: 2 } : {},
       });
@@ -313,6 +331,43 @@ export default function App() {
       setActiveMenuId(null);
       setDevices(await getDevices());
       await Promise.all([loadSystemStatus(), loadLogs()]);
+
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await wait(1500);
+
+        const commands = await getDeviceCommands(device.id);
+        const updatedCommand = commands.find((item) => item.id === command.id);
+
+        if (updatedCommand?.status === "done") {
+          setCommandFeedback((current) => ({
+            ...current,
+            [device.id]: { state: "success", label: `${label} success` },
+          }));
+          await Promise.all([loadDevices(), loadLogs()]);
+          return;
+        }
+
+        if (updatedCommand?.status === "failed") {
+          setCommandFeedback((current) => ({
+            ...current,
+            [device.id]: { state: "failed", label: `${label} failed` },
+          }));
+          await loadLogs();
+          return;
+        }
+
+        if (attempt === 3) {
+          setCommandFeedback((current) => ({
+            ...current,
+            [device.id]: { state: "waiting", label: `${label} waiting for device ack` },
+          }));
+        }
+      }
+
+      setCommandFeedback((current) => ({
+        ...current,
+        [device.id]: { state: "queued", label: `${label} queued, no ack yet` },
+      }));
     } catch (err) {
       console.error("Error queueing command", err);
       setCommandFeedback((current) => ({
@@ -326,6 +381,12 @@ export default function App() {
     await deleteDevice(device.id);
     setActiveMenuId(null);
     await refreshAll();
+  };
+
+  const openDeviceDetail = (device: Device) => {
+    setIsPanelOpen(false);
+    setActiveMenuId(null);
+    setSelectedDevice(device);
   };
 
   return (
@@ -414,19 +475,25 @@ export default function App() {
               <div className="v4-device-grid">
                 {filteredDevices.map((device) => {
                   const feedback = commandFeedback[device.id];
-                  const isSending = feedback?.state === "sending";
+                  const isSending = feedback?.state === "sending" || feedback?.state === "waiting";
+                  const statusClass = deviceStatusClass(device.status);
 
                   return (
                     <article className="v4-device-card" key={device.id}>
                       <div>
                         <div className="card-topline">
                           <div className="device-title-row">
-                            <div className={`device-icon ${device.status === "online" ? "online" : "offline"}`}>
+                            <div className={`device-icon ${statusClass}`}>
                               <Cpu size={16} />
                             </div>
                             <div>
                               <h2>{device.name}</h2>
-                              <span className="device-type">{device.type || "ESP"}</span>
+                              <div className="device-badges">
+                                <span className="device-type">{device.type || "ESP"}</span>
+                                <span className={`card-status-chip ${statusClass}`}>
+                                  {device.status}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
@@ -471,10 +538,13 @@ export default function App() {
 
                       <div className="card-footer">
                         <span className="status-line">
-                          <i className={device.status === "online" ? "online" : "offline"} />
-                          <strong className={device.status === "online" ? "online" : "offline"}>{device.status}</strong>
+                          <i className={statusClass} />
+                          <strong className={statusClass}>{device.status}</strong>
                         </span>
                         <div className="card-actions">
+                          <button onClick={() => openDeviceDetail(device)} type="button">
+                            Open
+                          </button>
                           <button disabled={isSending} onClick={() => runCommand(device, "reboot")} type="button">
                             Reboot
                           </button>
@@ -764,7 +834,32 @@ export default function App() {
       </main>
 
       <AddDevicePanel open={isPanelOpen} onClose={() => setIsPanelOpen(false)} onAdded={refreshAll} />
+      {selectedDevice && (
+        <section className="device-detail-modal">
+          <div className="detail-header">
+            <div>
+              <span className={`card-status-chip ${deviceStatusClass(selectedDevice.status)}`}>
+                {selectedDevice.status}
+              </span>
+              <h3>{selectedDevice.name}</h3>
+            </div>
+            <button className="icon-button" onClick={() => setSelectedDevice(null)} type="button" aria-label="Close device detail">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="detail-grid">
+            <DetailItem label="IP" value={selectedDevice.ip || "Unknown"} />
+            <DetailItem label="Type" value={selectedDevice.type || "ESP"} />
+            <DetailItem label="Firmware" value={selectedDevice.firmware || "N/A"} />
+            <DetailItem label="Last seen" value={formatLastSeen(selectedDevice.lastSeen)} />
+            <DetailItem label="Pending commands" value={String(selectedDevice.pendingCommands)} />
+            <DetailItem label="Device ID" value={selectedDevice.id} />
+          </div>
+        </section>
+      )}
       {isPanelOpen && <div className="backdrop" onClick={() => setIsPanelOpen(false)} />}
+      {selectedDevice && <div className="backdrop" onClick={() => setSelectedDevice(null)} />}
       {activeMenuId && <div className="menu-backdrop" onClick={() => setActiveMenuId(null)} />}
     </div>
   );
@@ -839,6 +934,15 @@ function SettingsCard({
           <li key={item}>{item}</li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="detail-item">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }

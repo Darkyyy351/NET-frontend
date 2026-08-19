@@ -47,3 +47,8 @@ export async function queueCommand(id: string, command: { type: string; payload?
   const res = await api.post<ApiResponse<DeviceCommand>>(`/devices/${id}/commands`, command);
   return res.data.data;
 }
+
+export async function getDeviceCommands(id: string): Promise<DeviceCommand[]> {
+  const res = await api.get<ApiResponse<DeviceCommand[]>>(`/devices/${id}/commands`);
+  return res.data.data;
+}

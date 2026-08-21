@@ -856,6 +856,10 @@ button:disabled {
   gap: 14px;
 }
 
+.telemetry-grid.host-telemetry-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .service-health-grid,
 .future-module-grid,
 .security-module-grid {
@@ -1670,6 +1674,10 @@ button:disabled {
   .service-health-grid,
   .future-module-grid,
   .security-module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-grid.host-telemetry-grid {
     grid-template-columns: 1fr;
   }
 

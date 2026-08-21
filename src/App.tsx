@@ -422,7 +422,7 @@ export default function App() {
     }
   };
 
-  const changeOperatingMode = async (mode: "normal" | "sleep") => {
+  const changeOperatingMode = async (mode: "normal" | "eco") => {
     if (mode === systemStatus?.operatingMode.mode || modeChangeState === "saving") {
       return;
     }
@@ -439,8 +439,8 @@ export default function App() {
     }
   };
 
-  const runCommand = async (device: Device, type: "blink" | "reboot") => {
-    const label = type === "blink" ? "Identify" : "Reboot";
+  const runCommand = async (device: Device, type: "identify" | "reboot") => {
+    const label = type === "identify" ? "Identify" : "Reboot";
 
     setCommandFeedback((current) => ({
       ...current,
@@ -450,7 +450,7 @@ export default function App() {
     try {
       const command = await queueCommand(device.id, {
         type,
-        payload: type === "blink" ? { times: 2 } : {},
+        payload: type === "identify" ? { times: 2 } : {},
       });
 
       setCommandFeedback((current) => ({
@@ -704,7 +704,7 @@ export default function App() {
                           <button
                             className="blue"
                             disabled={isSending}
-                            onClick={() => runCommand(device, "blink")}
+                            onClick={() => runCommand(device, "identify")}
                             type="button"
                           >
                             Identify
@@ -729,9 +729,9 @@ export default function App() {
                 <p>Detailni monitoring CM5 zakladny a kvality spojeni klientskych modulu.</p>
               </div>
               <div className="monitoring-header-actions">
-                <span className={`refresh-rate ${systemStatus?.operatingMode.mode === "sleep" ? "sleep" : "normal"}`}>
+                <span className={`refresh-rate ${systemStatus?.operatingMode.mode === "eco" ? "eco" : "normal"}`}>
                   <i />
-                  {systemStatus?.operatingMode.mode === "sleep" ? "ECO" : "LIVE"}{" "}
+                  {systemStatus?.operatingMode.mode === "eco" ? "ECO" : "LIVE"}{" "}
                   {systemStatus?.operatingMode.monitoringIntervalSeconds || 1}s
                 </span>
                 <button className="ghost-action" onClick={loadSystemStatus} type="button">
@@ -932,7 +932,7 @@ export default function App() {
               </div>
               <div className="mode-selector" aria-label="NET operating mode" role="group">
                 <button
-                  className={systemStatus?.operatingMode.mode !== "sleep" ? "active" : ""}
+                  className={systemStatus?.operatingMode.mode !== "eco" ? "active" : ""}
                   disabled={!systemStatus || modeChangeState === "saving"}
                   onClick={() => changeOperatingMode("normal")}
                   type="button"
@@ -941,13 +941,13 @@ export default function App() {
                   Normal
                 </button>
                 <button
-                  className={systemStatus?.operatingMode.mode === "sleep" ? "active sleep" : ""}
+                  className={systemStatus?.operatingMode.mode === "eco" ? "active eco" : ""}
                   disabled={!systemStatus || modeChangeState === "saving"}
-                  onClick={() => changeOperatingMode("sleep")}
+                  onClick={() => changeOperatingMode("eco")}
                   type="button"
                 >
                   <Moon size={14} />
-                  Sleep
+                  Eco
                 </button>
               </div>
               <span className={`mode-change-state ${modeChangeState}`} aria-live="polite">

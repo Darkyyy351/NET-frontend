@@ -5,15 +5,18 @@ import {
   Bell,
   Cable,
   CheckCircle2,
+  Clock3,
   Cpu,
   Database,
   Eye,
   FileText,
   Grid3X3,
+  GitCommitHorizontal,
   HardDrive,
   KeyRound,
   Lock,
   MoreVertical,
+  PackageCheck,
   Plus,
   Power,
   Radio,
@@ -34,6 +37,7 @@ import { deleteDevice, getDeviceCommands, getDevices, queueCommand, type Device 
 import { getLogs, type EventLog } from "./api/logs";
 import { getHealthStatus, getSystemStatus, type SystemService, type SystemStatus } from "./api/system";
 import { getApiBaseUrl, getApiToken, saveApiConfig } from "./api/axios";
+import { frontendBuild } from "./build";
 import "./styles.css";
 
 type View = "dashboard" | "monitoring" | "logs" | "security" | "settings";
@@ -200,6 +204,43 @@ function formatUptime(seconds?: number) {
   const minutes = Math.floor((seconds % 3600) / 60);
 
   return `${hours}h ${minutes}m`;
+}
+
+function shortCommit(value?: string | null) {
+  if (!value) {
+    return "N/A";
+  }
+
+  return value === "development" ? value : value.slice(0, 12);
+}
+
+function formatDeploymentTime(value?: string | null) {
+  if (!value) {
+    return "Not recorded";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Invalid timestamp";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function deploymentStatusClass(status?: string) {
+  if (status === "healthy") {
+    return "healthy";
+  }
+
+  if (status === "rolled_back") {
+    return "rolled-back";
+  }
+
+  return "unknown";
 }
 
 function wait(ms: number) {
@@ -417,7 +458,7 @@ export default function App() {
           <div className="core-brand">
             <span className="brand-pulse" />
             <span>
-              NET CORE <strong>0.1</strong>
+              NET CORE <strong>{frontendBuild.version}</strong>
             </span>
           </div>
 
@@ -614,7 +655,7 @@ export default function App() {
               </h3>
               <div className="telemetry-grid">
                 <MetricTile label="Backend uptime" value={formatUptime(systemStatus?.runtime.uptime)} />
-                <MetricTile label="Vytizeni CPU" value="N/A" tone="success" bar={12} />
+                <MetricTile label="Backend version" value={systemStatus?.build.version || "N/A"} tone="success" />
                 <MetricTile label="Heap used" value={formatBytes(systemStatus?.runtime.memory.heapUsed)} tone="blue" bar={42} />
                 <MetricTile label="Runtime" value={systemStatus ? `${systemStatus.runtime.platform}/${systemStatus.runtime.arch}` : "N/A"} tone="amber" />
               </div>
@@ -726,7 +767,7 @@ export default function App() {
                   </strong>
                   <span>Prepared for NET 1.0; manual .env update for now.</span>
                 </div>
-                <code>0.1 mode</code>
+                <code>legacy mode</code>
               </div>
             </div>
 
@@ -833,11 +874,49 @@ export default function App() {
               </div>
             </div>
 
+            <div className="deployment-panel">
+              <div className="deployment-header">
+                <h3>
+                  <PackageCheck size={15} />
+                  Deployment & Version
+                </h3>
+                <span className={`deployment-state ${deploymentStatusClass(systemStatus?.deployment.status)}`}>
+                  {systemStatus?.deployment.status || "unavailable"}
+                </span>
+              </div>
+              <div className="deployment-grid">
+                <DeploymentMetric
+                  icon={PackageCheck}
+                  label="Deployment"
+                  value={systemStatus?.deployment.status || "Unavailable"}
+                  detail="Managed by NET Deploy"
+                />
+                <DeploymentMetric
+                  icon={Clock3}
+                  label="Last update"
+                  value={formatDeploymentTime(systemStatus?.deployment.deployedAt)}
+                  detail="Recorded after both healthchecks"
+                />
+                <DeploymentMetric
+                  icon={GitCommitHorizontal}
+                  label="Backend build"
+                  value={systemStatus?.build.version || "N/A"}
+                  detail={shortCommit(systemStatus?.deployment.backend?.commit || systemStatus?.build.commit)}
+                />
+                <DeploymentMetric
+                  icon={GitCommitHorizontal}
+                  label="Frontend build"
+                  value={frontendBuild.version}
+                  detail={shortCommit(systemStatus?.deployment.frontend?.commit || frontendBuild.commit)}
+                />
+              </div>
+            </div>
+
             <div className="settings-grid wide">
               <SettingsCard
                 icon={CheckCircle2}
                 title="Readiness Checklist"
-                items={["Backend API stable", "Frontend Docker image prepared", "ESP telemetry pending", "CM5 deploy pending"]}
+                items={["Backend API stable", "Frontend container healthy", "Controlled CM5 updates", "ESP telemetry pending"]}
               />
               <SettingsCard
                 icon={Cable}
@@ -852,7 +931,7 @@ export default function App() {
               <SettingsCard
                 icon={Wrench}
                 title="Maintenance Windows"
-                items={["Manual updates for 0.1", "Future scheduled reboots", "Future backup retention", "Future OTA rollout"]}
+                items={["NET Deploy managed updates", "Automatic image rollback", "Future backup retention", "Future OTA rollout"]}
               />
             </div>
           </section>
@@ -999,6 +1078,29 @@ function SettingsCard({
           <li key={item}>{item}</li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function DeploymentMetric({
+  icon: Icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: typeof Server;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="deployment-metric">
+      <Icon size={15} />
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <code>{detail}</code>
+      </div>
     </div>
   );
 }

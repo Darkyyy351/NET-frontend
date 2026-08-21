@@ -14,6 +14,18 @@ export interface SystemService {
 }
 
 export interface SystemStatus {
+  build: {
+    version: string;
+    commit: string;
+    builtAt: string | null;
+    image: string | null;
+  };
+  deployment: {
+    status: "healthy" | "rolled_back" | "untracked" | "unavailable" | "unknown" | string;
+    deployedAt: string | null;
+    backend: { commit: string | null; image: string | null } | null;
+    frontend: { commit: string | null; image: string | null } | null;
+  };
   runtime: {
     uptime: number;
     timestamp: string;

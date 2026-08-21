@@ -15,6 +15,7 @@ import {
   HardDrive,
   KeyRound,
   Lock,
+  Moon,
   MoreVertical,
   PackageCheck,
   Plus,
@@ -35,7 +36,13 @@ import {
 import { AddDevicePanel } from "./components/AddDevicePanel";
 import { deleteDevice, getDeviceCommands, getDevices, queueCommand, type Device } from "./api/devices";
 import { getLogs, type EventLog } from "./api/logs";
-import { getHealthStatus, getSystemStatus, type SystemService, type SystemStatus } from "./api/system";
+import {
+  getHealthStatus,
+  getSystemStatus,
+  setOperatingMode,
+  type SystemService,
+  type SystemStatus,
+} from "./api/system";
 import { getApiBaseUrl, getApiToken, saveApiConfig } from "./api/axios";
 import { frontendBuild } from "./build";
 import "./styles.css";
@@ -280,6 +287,7 @@ export default function App() {
   const [apiToken, setApiToken] = useState(() => getApiToken());
   const [connectionState, setConnectionState] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [connectionMessage, setConnectionMessage] = useState("Runtime config is loaded from this browser.");
+  const [modeChangeState, setModeChangeState] = useState<"idle" | "saving" | "success" | "error">("idle");
 
   const loadDevices = async () => {
     setLoading(true);
@@ -320,6 +328,52 @@ export default function App() {
   useEffect(() => {
     refreshAll();
   }, []);
+
+  useEffect(() => {
+    if (activeView !== "monitoring") {
+      return undefined;
+    }
+
+    let disposed = false;
+    let requestInFlight = false;
+    const intervalSeconds = systemStatus?.operatingMode.monitoringIntervalSeconds || 1;
+
+    const refreshTelemetry = async () => {
+      if (document.visibilityState !== "visible" || requestInFlight) {
+        return;
+      }
+
+      requestInFlight = true;
+
+      try {
+        const status = await getSystemStatus();
+
+        if (!disposed) {
+          setSystemStatus(status);
+        }
+      } catch (err) {
+        console.warn("Live telemetry refresh failed", err);
+      } finally {
+        requestInFlight = false;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshTelemetry();
+      }
+    };
+
+    refreshTelemetry();
+    const intervalId = window.setInterval(refreshTelemetry, intervalSeconds * 1000);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeView, systemStatus?.operatingMode.monitoringIntervalSeconds]);
 
   const filteredDevices = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -365,6 +419,23 @@ export default function App() {
       setSystemStatus(null);
       setConnectionState("error");
       setConnectionMessage("Connection failed. Check API URL, CORS and bearer token.");
+    }
+  };
+
+  const changeOperatingMode = async (mode: "normal" | "sleep") => {
+    if (mode === systemStatus?.operatingMode.mode || modeChangeState === "saving") {
+      return;
+    }
+
+    setModeChangeState("saving");
+
+    try {
+      setSystemStatus(await setOperatingMode(mode));
+      setModeChangeState("success");
+      await loadLogs();
+    } catch (err) {
+      console.error("Operating mode change failed", err);
+      setModeChangeState("error");
     }
   };
 
@@ -657,10 +728,17 @@ export default function App() {
                 <h1>Hardware & Network Telemetry</h1>
                 <p>Detailni monitoring CM5 zakladny a kvality spojeni klientskych modulu.</p>
               </div>
-              <button className="ghost-action" onClick={refreshAll} type="button">
-                <RefreshCw size={14} />
-                Refresh
-              </button>
+              <div className="monitoring-header-actions">
+                <span className={`refresh-rate ${systemStatus?.operatingMode.mode === "sleep" ? "sleep" : "normal"}`}>
+                  <i />
+                  {systemStatus?.operatingMode.mode === "sleep" ? "ECO" : "LIVE"}{" "}
+                  {systemStatus?.operatingMode.monitoringIntervalSeconds || 1}s
+                </span>
+                <button className="ghost-action" onClick={loadSystemStatus} type="button">
+                  <RefreshCw size={14} />
+                  Refresh
+                </button>
+              </div>
             </div>
 
             <div className="telemetry-panel">
@@ -826,6 +904,57 @@ export default function App() {
                 <h1>Systemova konfigurace</h1>
                 <p>Sprava parametru aplikace a krizove rizeni zakladny CM5.</p>
               </div>
+            </div>
+
+            <div className="power-mode-panel">
+              <div className="power-mode-copy">
+                <div className="power-mode-title">
+                  <Moon size={16} />
+                  <div>
+                    <h3>NET Operating Mode</h3>
+                    <p>Keep control online while tuning background activity.</p>
+                  </div>
+                </div>
+                <div className="power-mode-metrics">
+                  <span>
+                    Telemetry
+                    <strong>{systemStatus?.operatingMode.monitoringIntervalSeconds || 1}s</strong>
+                  </span>
+                  <span>
+                    Heartbeat writes
+                    <strong>
+                      {systemStatus?.operatingMode.heartbeatPersistenceSeconds
+                        ? `${systemStatus.operatingMode.heartbeatPersistenceSeconds}s`
+                        : "Every"}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+              <div className="mode-selector" aria-label="NET operating mode" role="group">
+                <button
+                  className={systemStatus?.operatingMode.mode !== "sleep" ? "active" : ""}
+                  disabled={!systemStatus || modeChangeState === "saving"}
+                  onClick={() => changeOperatingMode("normal")}
+                  type="button"
+                >
+                  <Activity size={14} />
+                  Normal
+                </button>
+                <button
+                  className={systemStatus?.operatingMode.mode === "sleep" ? "active sleep" : ""}
+                  disabled={!systemStatus || modeChangeState === "saving"}
+                  onClick={() => changeOperatingMode("sleep")}
+                  type="button"
+                >
+                  <Moon size={14} />
+                  Sleep
+                </button>
+              </div>
+              <span className={`mode-change-state ${modeChangeState}`} aria-live="polite">
+                {modeChangeState === "saving" && "Applying..."}
+                {modeChangeState === "success" && "Mode updated"}
+                {modeChangeState === "error" && "Mode change failed"}
+              </span>
             </div>
 
             <div className="settings-grid">

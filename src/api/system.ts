@@ -26,6 +26,11 @@ export interface SystemStatus {
     backend: { commit: string | null; image: string | null } | null;
     frontend: { commit: string | null; image: string | null } | null;
   };
+  operatingMode: {
+    mode: "normal" | "sleep";
+    monitoringIntervalSeconds: number;
+    heartbeatPersistenceSeconds: number;
+  };
   host: {
     uptime: number | null;
     cpu: {
@@ -77,5 +82,10 @@ export async function getHealthStatus(): Promise<HealthStatus> {
 
 export async function getSystemStatus(): Promise<SystemStatus> {
   const res = await api.get<ApiResponse<SystemStatus>>("/system/status");
+  return res.data.data;
+}
+
+export async function setOperatingMode(mode: "normal" | "sleep"): Promise<SystemStatus> {
+  const res = await api.post<ApiResponse<SystemStatus>>("/system/mode", { mode });
   return res.data.data;
 }

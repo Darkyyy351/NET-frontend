@@ -148,15 +148,11 @@ function logClass(log: EventLog) {
 }
 
 function nodeUptime(device: Device) {
-  if (!device.lastSeen) {
-    return "0h 0m";
-  }
-
-  return "heartbeat active";
+  return device.lastSeen ? "Not reported" : "No heartbeat";
 }
 
-function pingLabel(device: Device) {
-  return device.status === "online" ? "< 50ms" : "--";
+function pingLabel() {
+  return "Not measured";
 }
 
 function deviceStatusClass(status: string) {
@@ -187,12 +183,26 @@ function serviceIcon(serviceId: string) {
   return Cable;
 }
 
-function formatBytes(value?: number) {
-  if (!value) {
+function formatCapacity(value?: number | null) {
+  if (!Number.isFinite(value) || !value) {
     return "N/A";
   }
 
+  const gigabytes = value / 1024 / 1024 / 1024;
+
+  if (gigabytes >= 1) {
+    return `${gigabytes.toFixed(1)} GB`;
+  }
+
   return `${Math.round(value / 1024 / 1024)} MB`;
+}
+
+function formatPercent(value?: number | null) {
+  return Number.isFinite(value) ? `${value?.toFixed(1)}%` : "N/A";
+}
+
+function formatTemperature(value?: number | null) {
+  return Number.isFinite(value) ? `${value?.toFixed(1)} C` : "N/A";
 }
 
 function formatUptime(seconds?: number) {
@@ -200,8 +210,13 @@ function formatUptime(seconds?: number) {
     return "N/A";
   }
 
-  const hours = Math.floor(seconds / 3600);
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
 
   return `${hours}h ${minutes}m`;
 }
@@ -653,11 +668,27 @@ export default function App() {
                 <HardDrive size={15} />
                 CM5 Compute Engine Stats
               </h3>
-              <div className="telemetry-grid">
-                <MetricTile label="Backend uptime" value={formatUptime(systemStatus?.runtime.uptime)} />
-                <MetricTile label="Backend version" value={systemStatus?.build.version || "N/A"} tone="success" />
-                <MetricTile label="Heap used" value={formatBytes(systemStatus?.runtime.memory.heapUsed)} tone="blue" bar={42} />
-                <MetricTile label="Runtime" value={systemStatus ? `${systemStatus.runtime.platform}/${systemStatus.runtime.arch}` : "N/A"} tone="amber" />
+              <div className="telemetry-grid host-telemetry-grid">
+                <MetricTile label="CM5 uptime" value={formatUptime(systemStatus?.host.uptime || undefined)} />
+                <MetricTile
+                  label="CPU usage"
+                  value={formatPercent(systemStatus?.host.cpu.usagePercent)}
+                  tone="success"
+                  bar={systemStatus?.host.cpu.usagePercent ?? undefined}
+                />
+                <MetricTile
+                  label="RAM usage"
+                  value={`${formatCapacity(systemStatus?.host.memory.used)} / ${formatCapacity(systemStatus?.host.memory.total)}`}
+                  tone="blue"
+                  bar={systemStatus?.host.memory.usagePercent ?? undefined}
+                />
+                <MetricTile label="SoC temperature" value={formatTemperature(systemStatus?.host.temperatureC)} tone="amber" />
+                <MetricTile
+                  label="Storage usage"
+                  value={`${formatCapacity(systemStatus?.host.storage.used)} / ${formatCapacity(systemStatus?.host.storage.total)}`}
+                  tone="blue"
+                  bar={systemStatus?.host.storage.usagePercent ?? undefined}
+                />
               </div>
             </div>
 
@@ -689,15 +720,15 @@ export default function App() {
             </div>
 
             <div className="table-panel">
-              <div className="table-title">Dostupnost a stabilita uzlu (SLA)</div>
+              <div className="table-title">Live node telemetry</div>
               <div className="node-list">
                 {devices.map((device) => (
                   <div className="node-row" key={device.id}>
                     <strong>{device.name}</strong>
                     <div className="node-metrics">
-                      <MetricInline label="Node Uptime" value={nodeUptime(device)} />
-                      <MetricInline label="Network Ping" value={pingLabel(device)} tone="blue" />
-                      <MetricInline label="SLA Dostupnost" value={device.status === "online" ? "100%" : "unknown"} tone="success" />
+                      <MetricInline label="Reported uptime" value={nodeUptime(device)} />
+                      <MetricInline label="Network latency" value={pingLabel()} />
+                      <MetricInline label="Availability history" value="Not tracked" />
                       <MetricInline label="Last seen" value={formatLastSeen(device.lastSeen)} />
                     </div>
                   </div>

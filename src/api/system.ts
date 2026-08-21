@@ -26,6 +26,26 @@ export interface SystemStatus {
     backend: { commit: string | null; image: string | null } | null;
     frontend: { commit: string | null; image: string | null } | null;
   };
+  host: {
+    uptime: number | null;
+    cpu: {
+      usagePercent: number | null;
+      cores: number | null;
+    };
+    memory: {
+      total: number | null;
+      used: number | null;
+      available: number | null;
+      usagePercent: number | null;
+    };
+    temperatureC: number | null;
+    storage: {
+      total: number | null;
+      used: number | null;
+      available: number | null;
+      usagePercent: number | null;
+    };
+  };
   runtime: {
     uptime: number;
     timestamp: string;

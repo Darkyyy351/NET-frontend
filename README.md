@@ -51,4 +51,4 @@ docker compose up -d --build
 
 For CM5 deployment, set the final backend URL/token before building the image. Vite embeds these values into the static frontend bundle, so do not use a long-term production secret here until NET gets real user sessions or a backend proxy.
 
-The complete CM5 preflight and update routine is maintained in the backend repository under `docs/cm5-preflight.md`.
+The complete CM5 preflight is maintained in the backend repository under `docs/cm5-preflight.md`. Routine backend/frontend updates are orchestrated together by the separate [`NET-deploy`](https://github.com/Darkyyy351/NET-deploy) repository, including backup, health verification and automatic image rollback.

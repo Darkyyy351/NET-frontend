@@ -88,7 +88,7 @@ export const AddDevicePanel: FC<AddDevicePanelProps> = ({ open, onClose, onAdded
       <div className="panel-header">
         <div>
           <h3>Add Device</h3>
-          <p>Manual enrollment for NET 0.1 test environment.</p>
+          <p>Manual enrollment for the NET test environment.</p>
         </div>
         <button className="close-panel" onClick={onClose} aria-label="Close add device panel">
           x

@@ -64,6 +64,10 @@ button:disabled {
   font-size: 11px;
 }
 
+.core-brand > span:last-child {
+  white-space: nowrap;
+}
+
 .brand-pulse {
   width: 10px;
   height: 10px;
@@ -812,6 +816,7 @@ button:disabled {
 .config-panel,
 .security-card,
 .danger-panel,
+.deployment-panel,
 .services-panel,
 .log-panel {
   border: 1px solid #1e293b;
@@ -1177,6 +1182,103 @@ button:disabled {
 
 .settings-grid.wide {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.deployment-panel {
+  padding: 18px 20px;
+}
+
+.deployment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.62);
+}
+
+.deployment-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deployment-state {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deployment-state.healthy {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+}
+
+.deployment-state.rolled-back {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.deployment-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-top: 16px;
+}
+
+.deployment-metric {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 2px 16px;
+  border-left: 1px solid rgba(30, 41, 59, 0.62);
+  color: #60a5fa;
+}
+
+.deployment-metric:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.deployment-metric > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.deployment-metric span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deployment-metric strong,
+.deployment-metric code {
+  overflow-wrap: anywhere;
+}
+
+.deployment-metric strong {
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+.deployment-metric code {
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
 }
 
 .danger-panel {
@@ -1569,6 +1671,23 @@ button:disabled {
   .future-module-grid,
   .security-module-grid {
     grid-template-columns: 1fr;
+  }
+
+  .deployment-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .deployment-metric,
+  .deployment-metric:first-child {
+    padding: 12px 0 0;
+    border-top: 1px solid rgba(30, 41, 59, 0.62);
+    border-left: 0;
+  }
+
+  .deployment-metric:first-child {
+    padding-top: 0;
+    border-top: 0;
   }
 }
 

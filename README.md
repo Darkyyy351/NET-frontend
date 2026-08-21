@@ -1,6 +1,6 @@
 # NET Frontend
 
-NET Core dashboard shell for the NET 0.1 test environment.
+NET Core dashboard for the NET 0.2 development line.
 
 ## Local Development
 

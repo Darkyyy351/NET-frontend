@@ -40,9 +40,9 @@ api.interceptors.request.use((config) => {
 
   config.baseURL = getApiBaseUrl();
 
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else {
+  } else if (config.headers) {
     delete config.headers.Authorization;
   }
 

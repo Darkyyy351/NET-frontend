@@ -9,6 +9,7 @@ import {
   Cpu,
   Database,
   Eye,
+  Fan,
   FileText,
   Grid3X3,
   GitCommitHorizontal,
@@ -38,8 +39,12 @@ import { deleteDevice, getDeviceCommands, getDevices, queueCommand, type Device 
 import { getLogs, type EventLog } from "./api/logs";
 import {
   getHealthStatus,
+  getFanControlStatus,
   getSystemStatus,
   setOperatingMode,
+  startFanTest,
+  stopFanTest,
+  type FanControlStatus,
   type SystemService,
   type SystemStatus,
 } from "./api/system";
@@ -246,14 +251,14 @@ function coreHealth(status: SystemStatus | null): { label: string; tone: CoreTon
   );
   const fanFault = fan?.available && Number(fan.pwm) > 0 && fan.rpm === 0;
   const critical = reaches(cpu.usagePercent, 95) || reaches(memory.usagePercent, 95) ||
-    reaches(storage.usagePercent, 98) || reaches(temperatureC, 80) || fanFault;
+    reaches(storage.usagePercent, 98) || reaches(temperatureC, 85) || fanFault;
 
   if (critical) {
     return { label: "Critical", tone: "critical" };
   }
 
   const attention = reaches(cpu.usagePercent, 85) || reaches(memory.usagePercent, 85) ||
-    reaches(storage.usagePercent, 90) || reaches(temperatureC, 70);
+    reaches(storage.usagePercent, 90) || reaches(temperatureC, 67.5);
 
   return attention
     ? { label: "Attention", tone: "attention" }
@@ -352,6 +357,9 @@ export default function App() {
   const [connectionState, setConnectionState] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [connectionMessage, setConnectionMessage] = useState("Runtime config is loaded from this browser.");
   const [modeChangeState, setModeChangeState] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [fanControlStatus, setFanControlStatus] = useState<FanControlStatus | null>(null);
+  const [fanControlAction, setFanControlAction] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [fanControlMessage, setFanControlMessage] = useState("Manual tests return to kernel control after 60 seconds.");
 
   const loadDevices = async () => {
     setLoading(true);
@@ -439,6 +447,29 @@ export default function App() {
     };
   }, [activeView, systemStatus?.operatingMode.monitoringIntervalSeconds]);
 
+  useEffect(() => {
+    if (activeView !== "settings") {
+      return undefined;
+    }
+
+    let disposed = false;
+    const refreshFanControl = async () => {
+      try {
+        const status = await getFanControlStatus();
+        if (!disposed) setFanControlStatus(status);
+      } catch {
+        if (!disposed) setFanControlStatus(null);
+      }
+    };
+
+    refreshFanControl();
+    const intervalId = window.setInterval(refreshFanControl, 1000);
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeView]);
+
   const filteredDevices = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -500,6 +531,40 @@ export default function App() {
     } catch (err) {
       console.error("Operating mode change failed", err);
       setModeChangeState("error");
+    }
+  };
+
+  const runFanTest = async (state: number) => {
+    if (!fanControlStatus?.available || fanControlAction === "saving") return;
+    setFanControlAction("saving");
+    setFanControlMessage(`Applying fan state ${state}...`);
+
+    try {
+      setFanControlStatus(await startFanTest(state, 60));
+      setFanControlAction("success");
+      setFanControlMessage("Manual test active. Kernel control will return automatically.");
+      await loadLogs();
+    } catch (error) {
+      console.error("Fan test failed", error);
+      setFanControlAction("error");
+      setFanControlMessage("Fan test was rejected by the safety helper.");
+    }
+  };
+
+  const returnFanToSystem = async () => {
+    if (!fanControlStatus?.available || fanControlAction === "saving") return;
+    setFanControlAction("saving");
+    setFanControlMessage("Restoring kernel fan control...");
+
+    try {
+      setFanControlStatus(await stopFanTest());
+      setFanControlAction("success");
+      setFanControlMessage("Kernel step_wise control restored.");
+      await loadLogs();
+    } catch (error) {
+      console.error("Fan control restore failed", error);
+      setFanControlAction("error");
+      setFanControlMessage("Could not reach the fan safety helper.");
     }
   };
 
@@ -861,7 +926,7 @@ export default function App() {
                       label="SoC temperature"
                       value={formatTemperature(systemStatus?.host.temperatureC)}
                       detail="CM5 package sensor"
-                      tone={metricTone(systemStatus?.host.temperatureC, 70, 80)}
+                      tone={metricTone(systemStatus?.host.temperatureC, 67.5, 85)}
                     />
                     <CoreMetric
                       label="Cooling fan"
@@ -1082,6 +1147,56 @@ export default function App() {
                 {modeChangeState === "error" && "Mode change failed"}
               </span>
             </div>
+
+            <section className="fan-control-panel">
+              <div className="fan-control-header">
+                <div className="fan-control-title">
+                  <Fan size={16} />
+                  <div>
+                    <h3>CM5 Fan Control</h3>
+                    <p>Time-limited hardware test with automatic kernel fallback.</p>
+                  </div>
+                </div>
+                <span className={`fan-control-mode ${fanControlStatus?.mode || "unavailable"}`}>
+                  {fanControlStatus?.mode === "manual_test" ? `Manual ${fanControlStatus.remainingSeconds || 0}s` :
+                    fanControlStatus?.mode === "system" ? "System Auto" : "Unavailable"}
+                </span>
+              </div>
+
+              <div className="fan-control-body">
+                <div className="fan-control-metrics">
+                  <span>Temperature<strong>{formatTemperature(fanControlStatus?.temperatureC)}</strong></span>
+                  <span>Cooling state<strong>{fanControlStatus?.state ?? "N/A"} / 4</strong></span>
+                  <span>Policy<strong>{fanControlStatus?.policy || "N/A"}</strong></span>
+                </div>
+                <div className="fan-state-selector" aria-label="Manual fan test state" role="group">
+                  {["Off", "Low", "Medium", "High", "Max"].map((label, state) => (
+                    <button
+                      className={fanControlStatus?.mode === "manual_test" && fanControlStatus.requestedState === state ? "active" : ""}
+                      disabled={!fanControlStatus?.available || fanControlAction === "saving" || (state === 0 && !fanControlStatus.offAllowed)}
+                      key={label}
+                      onClick={() => runFanTest(state)}
+                      type="button"
+                    >
+                      <span>{state}</span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="fan-system-button"
+                  disabled={!fanControlStatus?.available || fanControlStatus.mode !== "manual_test" || fanControlAction === "saving"}
+                  onClick={returnFanToSystem}
+                  type="button"
+                >
+                  <RefreshCw size={13} />
+                  Return to System
+                </button>
+              </div>
+              <div className={`fan-control-feedback ${fanControlAction}`} aria-live="polite">
+                {fanControlStatus?.error || fanControlMessage}
+              </div>
+            </section>
 
             <div className="settings-grid">
               <div className="config-panel">

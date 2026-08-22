@@ -1537,6 +1537,157 @@ button:disabled {
   color: #fb7185;
 }
 
+.fan-control-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  border-radius: 14px;
+  background: #0b0f19;
+}
+
+.fan-control-header,
+.fan-control-body,
+.fan-control-title,
+.fan-control-metrics,
+.fan-state-selector {
+  display: flex;
+  align-items: center;
+}
+
+.fan-control-header {
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.fan-control-title {
+  gap: 10px;
+  color: #fbbf24;
+}
+
+.fan-control-title h3,
+.fan-control-title p {
+  margin: 0;
+}
+
+.fan-control-title h3 {
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+.fan-control-title p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.fan-control-mode {
+  padding: 5px 8px;
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.fan-control-mode.system {
+  border-color: rgba(16, 185, 129, 0.24);
+  color: #34d399;
+}
+
+.fan-control-mode.manual_test {
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.fan-control-body {
+  gap: 18px;
+}
+
+.fan-control-metrics {
+  flex: 1;
+  gap: 22px;
+}
+
+.fan-control-metrics span {
+  display: grid;
+  gap: 4px;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.fan-control-metrics strong {
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  text-transform: none;
+}
+
+.fan-state-selector {
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.42);
+}
+
+.fan-state-selector button {
+  min-width: 60px;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.fan-state-selector button span {
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+.fan-state-selector button.active {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+
+.fan-system-button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background: #111827;
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.fan-control-feedback {
+  min-height: 14px;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.fan-control-feedback.success {
+  color: #34d399;
+}
+
+.fan-control-feedback.error {
+  color: #fb7185;
+}
+
 .settings-grid.wide {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -2056,13 +2207,34 @@ button:disabled {
   }
 
   .power-mode-panel,
-  .power-mode-copy {
+  .power-mode-copy,
+  .fan-control-header,
+  .fan-control-body {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
 
   .power-mode-copy {
     display: grid;
+  }
+
+  .fan-control-header,
+  .fan-control-body {
+    flex-direction: column;
+  }
+
+  .fan-control-metrics {
+    justify-content: space-between;
+  }
+
+  .fan-state-selector {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .fan-state-selector button {
+    min-width: 0;
   }
 
   .mode-selector {
@@ -2118,6 +2290,12 @@ button:disabled {
   .service-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .fan-control-metrics {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .card-actions,

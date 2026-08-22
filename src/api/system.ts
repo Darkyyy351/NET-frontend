@@ -83,6 +83,21 @@ export interface HealthStatus {
   timestamp: string;
 }
 
+export interface FanControlStatus {
+  available: boolean;
+  mode: "system" | "manual_test" | "unavailable";
+  policy?: string;
+  state?: number;
+  requestedState?: number | null;
+  maxState?: number;
+  temperatureC?: number;
+  remainingSeconds?: number;
+  reason?: string;
+  maxTestSeconds: number;
+  offAllowed?: boolean;
+  error?: string;
+}
+
 export async function getHealthStatus(): Promise<HealthStatus> {
   const res = await api.get<HealthStatus>("/health");
   return res.data;
@@ -95,5 +110,20 @@ export async function getSystemStatus(): Promise<SystemStatus> {
 
 export async function setOperatingMode(mode: "normal" | "eco"): Promise<SystemStatus> {
   const res = await api.post<ApiResponse<SystemStatus>>("/system/mode", { mode });
+  return res.data.data;
+}
+
+export async function getFanControlStatus(): Promise<FanControlStatus> {
+  const res = await api.get<ApiResponse<FanControlStatus>>("/system/fan-control");
+  return res.data.data;
+}
+
+export async function startFanTest(state: number, duration = 60): Promise<FanControlStatus> {
+  const res = await api.post<ApiResponse<FanControlStatus>>("/system/fan-control/test", { state, duration });
+  return res.data.data;
+}
+
+export async function stopFanTest(): Promise<FanControlStatus> {
+  const res = await api.post<ApiResponse<FanControlStatus>>("/system/fan-control/stop");
   return res.data.data;
 }

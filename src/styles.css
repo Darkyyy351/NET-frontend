@@ -885,14 +885,239 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.telemetry-grid {
+.cm5-overview {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
-.telemetry-grid.host-telemetry-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+.cm5-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 17px 20px;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  background: #0b0f19;
+}
+
+.cm5-overview-title,
+.cm5-overview-summary,
+.cm5-domain-header,
+.cm5-facts {
+  display: flex;
+  align-items: center;
+}
+
+.cm5-overview-title {
+  gap: 12px;
+}
+
+.cm5-overview-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #60a5fa;
+}
+
+.cm5-overview-title span,
+.cm5-domain-header span,
+.cm5-metric-label {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cm5-overview-title h2 {
+  margin: 2px 0 0;
+  color: #f1f5f9;
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.cm5-overview-summary {
+  gap: 18px;
+}
+
+.cm5-facts {
+  gap: 16px;
+}
+
+.cm5-facts span {
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+}
+
+.cm5-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 86px;
+  justify-content: center;
+  padding: 6px 9px;
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  border-radius: 7px;
+  background: rgba(100, 116, 139, 0.08);
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.cm5-health i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.cm5-health.stable {
+  border-color: rgba(16, 185, 129, 0.24);
+  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+}
+
+.cm5-health.attention {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.08);
+  color: #fbbf24;
+}
+
+.cm5-health.critical {
+  border-color: rgba(244, 63, 94, 0.3);
+  background: rgba(244, 63, 94, 0.09);
+  color: #fb7185;
+}
+
+.cm5-domain-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cm5-domain {
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid rgba(30, 41, 59, 0.78);
+  border-radius: 12px;
+  background: #0b0f19;
+}
+
+.cm5-domain.primary {
+  border-top-color: rgba(59, 130, 246, 0.55);
+}
+
+.cm5-domain.thermal {
+  border-top-color: rgba(245, 158, 11, 0.45);
+}
+
+.cm5-domain.runtime {
+  border-top-color: rgba(16, 185, 129, 0.4);
+}
+
+.cm5-domain-header {
+  gap: 9px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.65);
+  color: #60a5fa;
+}
+
+.cm5-domain.thermal .cm5-domain-header {
+  color: #fbbf24;
+}
+
+.cm5-domain.runtime .cm5-domain-header {
+  color: #34d399;
+}
+
+.cm5-domain-header strong {
+  display: block;
+  margin-top: 2px;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.cm5-domain-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  padding-top: 15px;
+}
+
+.cm5-metric {
+  min-width: 0;
+  padding-right: 14px;
+}
+
+.cm5-metric + .cm5-metric {
+  padding-right: 0;
+  padding-left: 14px;
+  border-left: 1px solid rgba(30, 41, 59, 0.65);
+}
+
+.cm5-metric strong {
+  display: block;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.cm5-metric.stable strong {
+  color: #34d399;
+}
+
+.cm5-metric.attention strong {
+  color: #fbbf24;
+}
+
+.cm5-metric.critical strong {
+  color: #fb7185;
+}
+
+.cm5-metric small {
+  display: block;
+  min-height: 30px;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.cm5-metric-bar {
+  height: 4px;
+  margin-top: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #1e293b;
+}
+
+.cm5-metric-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #3b82f6;
+}
+
+.cm5-metric.stable .cm5-metric-bar i {
+  background: #10b981;
+}
+
+.cm5-metric.attention .cm5-metric-bar i {
+  background: #f59e0b;
+}
+
+.cm5-metric.critical .cm5-metric-bar i {
+  background: #f43f5e;
 }
 
 .service-health-grid,
@@ -989,36 +1214,6 @@ button:disabled {
 
 .security-module-card svg {
   color: #60a5fa;
-}
-
-.metric-tile {
-  min-height: 84px;
-  padding: 13px;
-  border: 1px solid rgba(30, 41, 59, 0.62);
-  border-radius: 10px;
-  background: rgba(15, 23, 42, 0.45);
-}
-
-.metric-tile strong {
-  display: block;
-  margin-top: 7px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
-}
-
-.metric-bar {
-  height: 4px;
-  margin-top: 10px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #1e293b;
-}
-
-.metric-bar i {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: #3b82f6;
 }
 
 .table-panel {
@@ -1790,8 +1985,8 @@ button:disabled {
 }
 
 @media (max-width: 1200px) {
-  .telemetry-grid.host-telemetry-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .cm5-domain-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1820,9 +2015,23 @@ button:disabled {
 
   .view-header,
   .view-actions,
-  .node-row {
+  .node-row,
+  .cm5-overview-header,
+  .cm5-overview-summary {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .cm5-overview-summary {
+    gap: 12px;
+  }
+
+  .cm5-facts {
+    flex-wrap: wrap;
+  }
+
+  .cm5-health {
+    align-self: flex-start;
   }
 
   .search-box {
@@ -1838,10 +2047,6 @@ button:disabled {
   .service-health-grid,
   .future-module-grid,
   .security-module-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .telemetry-grid.host-telemetry-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1889,6 +2094,22 @@ button:disabled {
 
   .v4-device-grid {
     grid-template-columns: 1fr;
+  }
+
+  .cm5-domain-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .cm5-metric,
+  .cm5-metric + .cm5-metric {
+    padding: 0;
+    border-left: 0;
+  }
+
+  .cm5-metric + .cm5-metric {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(30, 41, 59, 0.65);
   }
 
   .card-footer,

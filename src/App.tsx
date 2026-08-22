@@ -12,7 +12,6 @@ import {
   FileText,
   Grid3X3,
   GitCommitHorizontal,
-  HardDrive,
   KeyRound,
   Lock,
   Moon,
@@ -27,6 +26,7 @@ import {
   Settings,
   Shield,
   Terminal,
+  Thermometer,
   Trash2,
   Wifi,
   Wrench,
@@ -52,6 +52,7 @@ type CommandFeedback = {
   state: "sending" | "queued" | "waiting" | "success" | "failed";
   label: string;
 };
+type CoreTone = "stable" | "attention" | "critical" | "neutral";
 
 const viewItems: Array<{ id: View; label: string; icon: typeof Grid3X3 }> = [
   { id: "dashboard", label: "Dashboard", icon: Grid3X3 },
@@ -214,6 +215,65 @@ function formatTemperature(value?: number | null) {
 
 function formatRpm(value?: number | null) {
   return Number.isFinite(value) ? `${Math.round(value as number)} RPM` : "N/A";
+}
+
+function metricTone(value: number | null | undefined, attentionAt: number, criticalAt: number): CoreTone {
+  if (!Number.isFinite(value)) {
+    return "neutral";
+  }
+
+  if ((value as number) >= criticalAt) {
+    return "critical";
+  }
+
+  return (value as number) >= attentionAt ? "attention" : "stable";
+}
+
+function coreHealth(status: SystemStatus | null): { label: string; tone: CoreTone } {
+  if (!status) {
+    return { label: "Awaiting telemetry", tone: "neutral" };
+  }
+
+  const { cpu, memory, storage, temperatureC, fan } = status.host;
+  const values = [cpu.usagePercent, memory.usagePercent, storage.usagePercent, temperatureC];
+
+  if (!values.some((value) => Number.isFinite(value))) {
+    return { label: "Awaiting telemetry", tone: "neutral" };
+  }
+
+  const reaches = (value: number | null, threshold: number) => (
+    typeof value === "number" && Number.isFinite(value) && value >= threshold
+  );
+  const fanFault = fan?.available && Number(fan.pwm) > 0 && fan.rpm === 0;
+  const critical = reaches(cpu.usagePercent, 95) || reaches(memory.usagePercent, 95) ||
+    reaches(storage.usagePercent, 98) || reaches(temperatureC, 80) || fanFault;
+
+  if (critical) {
+    return { label: "Critical", tone: "critical" };
+  }
+
+  const attention = reaches(cpu.usagePercent, 85) || reaches(memory.usagePercent, 85) ||
+    reaches(storage.usagePercent, 90) || reaches(temperatureC, 70);
+
+  return attention
+    ? { label: "Attention", tone: "attention" }
+    : { label: "Stable", tone: "stable" };
+}
+
+function fanState(status: SystemStatus | null): { label: string; tone: CoreTone } {
+  const fan = status?.host.fan;
+
+  if (!fan?.available) {
+    return { label: "Unavailable", tone: "neutral" };
+  }
+
+  if (Number(fan.pwm) > 0 && fan.rpm === 0) {
+    return { label: "Check fan", tone: "critical" };
+  }
+
+  return Number(fan.rpm) > 0
+    ? { label: "Active", tone: "stable" }
+    : { label: "Idle", tone: "neutral" };
 }
 
 function formatUptime(seconds?: number) {
@@ -745,40 +805,96 @@ export default function App() {
               </div>
             </div>
 
-            <div className="telemetry-panel">
-              <h3>
-                <HardDrive size={15} />
-                CM5 Compute Engine Stats
-              </h3>
-              <div className="telemetry-grid host-telemetry-grid">
-                <MetricTile label="CM5 uptime" value={formatUptime(systemStatus?.host.uptime || undefined)} />
-                <MetricTile
-                  label="CPU usage"
-                  value={formatPercent(systemStatus?.host.cpu.usagePercent)}
-                  tone="success"
-                  bar={systemStatus?.host.cpu.usagePercent ?? undefined}
-                />
-                <MetricTile
-                  label="RAM usage"
-                  value={`${formatCapacity(systemStatus?.host.memory.used)} / ${formatCapacity(systemStatus?.host.memory.total)}`}
-                  tone="blue"
-                  bar={systemStatus?.host.memory.usagePercent ?? undefined}
-                />
-                <MetricTile label="SoC temperature" value={formatTemperature(systemStatus?.host.temperatureC)} tone="amber" />
-                <MetricTile
-                  label={`Fan / PWM ${formatPercent(systemStatus?.host.fan?.pwmPercent)}`}
-                  value={formatRpm(systemStatus?.host.fan?.rpm)}
-                  tone="blue"
-                  bar={systemStatus?.host.fan?.pwmPercent ?? undefined}
-                />
-                <MetricTile
-                  label="Storage usage"
-                  value={`${formatCapacity(systemStatus?.host.storage.used)} / ${formatCapacity(systemStatus?.host.storage.total)}`}
-                  tone="blue"
-                  bar={systemStatus?.host.storage.usagePercent ?? undefined}
-                />
+            <section className="cm5-overview">
+              <header className="cm5-overview-header">
+                <div className="cm5-overview-title">
+                  <span className="cm5-overview-icon"><Server size={18} /></span>
+                  <div>
+                    <span>CM5 Core</span>
+                    <h2>Compute Engine</h2>
+                  </div>
+                </div>
+                <div className="cm5-overview-summary">
+                  <div className="cm5-facts">
+                    <span>{systemStatus?.host.cpu.cores ?? "N/A"} CPU cores</span>
+                    <span>{systemStatus?.operatingMode.mode === "eco" ? "Eco" : "Normal"} mode</span>
+                    <span>{systemStatus?.operatingMode.monitoringIntervalSeconds || 1}s telemetry</span>
+                  </div>
+                  <span className={`cm5-health ${coreHealth(systemStatus).tone}`}>
+                    <i />
+                    {coreHealth(systemStatus).label}
+                  </span>
+                </div>
+              </header>
+
+              <div className="cm5-domain-grid">
+                <article className="cm5-domain primary">
+                  <div className="cm5-domain-header">
+                    <Activity size={15} />
+                    <div><span>Workload</span><strong>Core load</strong></div>
+                  </div>
+                  <div className="cm5-domain-stats">
+                    <CoreMetric
+                      label="Processor"
+                      value={formatPercent(systemStatus?.host.cpu.usagePercent)}
+                      detail={`${systemStatus?.host.cpu.cores ?? "N/A"} active cores`}
+                      percent={systemStatus?.host.cpu.usagePercent}
+                      tone={metricTone(systemStatus?.host.cpu.usagePercent, 85, 95)}
+                    />
+                    <CoreMetric
+                      label="Memory"
+                      value={formatPercent(systemStatus?.host.memory.usagePercent)}
+                      detail={`${formatCapacity(systemStatus?.host.memory.used)} of ${formatCapacity(systemStatus?.host.memory.total)}`}
+                      percent={systemStatus?.host.memory.usagePercent}
+                      tone={metricTone(systemStatus?.host.memory.usagePercent, 85, 95)}
+                    />
+                  </div>
+                </article>
+
+                <article className="cm5-domain thermal">
+                  <div className="cm5-domain-header">
+                    <Thermometer size={15} />
+                    <div><span>Thermal</span><strong>Temperature & cooling</strong></div>
+                  </div>
+                  <div className="cm5-domain-stats">
+                    <CoreMetric
+                      label="SoC temperature"
+                      value={formatTemperature(systemStatus?.host.temperatureC)}
+                      detail="CM5 package sensor"
+                      tone={metricTone(systemStatus?.host.temperatureC, 70, 80)}
+                    />
+                    <CoreMetric
+                      label="Cooling fan"
+                      value={formatRpm(systemStatus?.host.fan?.rpm)}
+                      detail={`${fanState(systemStatus).label} / PWM ${formatPercent(systemStatus?.host.fan?.pwmPercent)}`}
+                      percent={systemStatus?.host.fan?.pwmPercent}
+                      tone={fanState(systemStatus).tone}
+                    />
+                  </div>
+                </article>
+
+                <article className="cm5-domain runtime">
+                  <div className="cm5-domain-header">
+                    <Clock3 size={15} />
+                    <div><span>Runtime</span><strong>Continuity & capacity</strong></div>
+                  </div>
+                  <div className="cm5-domain-stats">
+                    <CoreMetric
+                      label="System uptime"
+                      value={formatUptime(systemStatus?.host.uptime || undefined)}
+                      detail="Continuous core runtime"
+                    />
+                    <CoreMetric
+                      label="Data storage"
+                      value={formatPercent(systemStatus?.host.storage.usagePercent)}
+                      detail={`${formatCapacity(systemStatus?.host.storage.used)} of ${formatCapacity(systemStatus?.host.storage.total)}`}
+                      percent={systemStatus?.host.storage.usagePercent}
+                      tone={metricTone(systemStatus?.host.storage.usagePercent, 90, 98)}
+                    />
+                  </div>
+                </article>
               </div>
-            </div>
+            </section>
 
             <div className="service-health-grid">
               {visibleServiceStatuses.map((service) => {
@@ -1179,24 +1295,27 @@ export default function App() {
   );
 }
 
-function MetricTile({
+function CoreMetric({
   label,
   value,
+  detail,
   tone,
-  bar,
+  percent,
 }: {
   label: string;
   value: string;
-  tone?: "success" | "blue" | "amber";
-  bar?: number;
+  detail: string;
+  tone?: CoreTone;
+  percent?: number | null;
 }) {
   return (
-    <div className="metric-tile">
-      <span>{label}</span>
-      <strong className={tone || ""}>{value}</strong>
-      {typeof bar === "number" && (
-        <div className="metric-bar">
-          <i style={{ width: `${bar}%` }} />
+    <div className={`cm5-metric ${tone || "neutral"}`}>
+      <span className="cm5-metric-label">{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+      {typeof percent === "number" && (
+        <div className="cm5-metric-bar">
+          <i style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }} />
         </div>
       )}
     </div>

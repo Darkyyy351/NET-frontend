@@ -44,6 +44,14 @@ export interface SystemStatus {
       usagePercent: number | null;
     };
     temperatureC: number | null;
+    fan: {
+      available: boolean;
+      driver: string | null;
+      rpm: number | null;
+      pwm: number | null;
+      pwmPercent: number | null;
+      controlMode: number | null;
+    };
     storage: {
       total: number | null;
       used: number | null;

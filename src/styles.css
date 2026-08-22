@@ -892,7 +892,7 @@ button:disabled {
 }
 
 .telemetry-grid.host-telemetry-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .service-health-grid,
@@ -1787,6 +1787,12 @@ button:disabled {
   position: fixed;
   inset: 0;
   z-index: 30;
+}
+
+@media (max-width: 1200px) {
+  .telemetry-grid.host-telemetry-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {

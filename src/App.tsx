@@ -212,6 +212,10 @@ function formatTemperature(value?: number | null) {
   return Number.isFinite(value) ? `${value?.toFixed(1)} C` : "N/A";
 }
 
+function formatRpm(value?: number | null) {
+  return Number.isFinite(value) ? `${Math.round(value as number)} RPM` : "N/A";
+}
+
 function formatUptime(seconds?: number) {
   if (!seconds) {
     return "N/A";
@@ -761,6 +765,12 @@ export default function App() {
                   bar={systemStatus?.host.memory.usagePercent ?? undefined}
                 />
                 <MetricTile label="SoC temperature" value={formatTemperature(systemStatus?.host.temperatureC)} tone="amber" />
+                <MetricTile
+                  label={`Fan / PWM ${formatPercent(systemStatus?.host.fan?.pwmPercent)}`}
+                  value={formatRpm(systemStatus?.host.fan?.rpm)}
+                  tone="blue"
+                  bar={systemStatus?.host.fan?.pwmPercent ?? undefined}
+                />
                 <MetricTile
                   label="Storage usage"
                   value={`${formatCapacity(systemStatus?.host.storage.used)} / ${formatCapacity(systemStatus?.host.storage.total)}`}

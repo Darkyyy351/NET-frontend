@@ -360,15 +360,15 @@ export default function App() {
   const [fanControlStatus, setFanControlStatus] = useState<FanControlStatus | null>(null);
   const [fanControlAction, setFanControlAction] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [fanControlMessage, setFanControlMessage] = useState("Manual tests return to kernel control after 60 seconds.");
-  const [refreshingDevices, setRefreshingDevices] = useState(false);
+  const [deviceRefreshState, setDeviceRefreshState] = useState<"idle" | "refreshing" | "success" | "error">("idle");
 
-  const loadDevices = async ({ background = false } = {}) => {
+  const loadDevices = async ({ background = false, fresh = false }: { background?: boolean; fresh?: boolean } = {}) => {
     if (!background) {
       setLoading(true);
     }
 
     try {
-      setDevices(await getDevices());
+      setDevices(await getDevices({ fresh }));
       setError(null);
       return true;
     } catch (err) {
@@ -405,10 +405,10 @@ export default function App() {
   };
 
   const refreshDeviceList = async () => {
-    if (refreshingDevices) return;
-    setRefreshingDevices(true);
-    await loadDevices({ background: true });
-    setRefreshingDevices(false);
+    if (deviceRefreshState === "refreshing") return;
+    setDeviceRefreshState("refreshing");
+    const success = await loadDevices({ background: true, fresh: true });
+    setDeviceRefreshState(success ? "success" : "error");
   };
 
   useEffect(() => {
@@ -777,14 +777,24 @@ export default function App() {
                 </label>
 
                 <button
-                  className="ghost-action device-refresh-action"
-                  disabled={refreshingDevices}
+                  className={`ghost-action device-refresh-action ${deviceRefreshState}`}
+                  disabled={deviceRefreshState === "refreshing"}
                   onClick={refreshDeviceList}
                   title={`Automatic status refresh every ${systemStatus?.operatingMode.mode === "eco" ? 30 : 5} seconds`}
                   type="button"
                 >
-                  <RefreshCw className={refreshingDevices ? "is-spinning" : ""} size={14} />
-                  {refreshingDevices ? "Refreshing" : "Refresh"}
+                  {deviceRefreshState === "success" ? (
+                    <CheckCircle2 size={14} />
+                  ) : (
+                    <RefreshCw className={deviceRefreshState === "refreshing" ? "is-spinning" : ""} size={14} />
+                  )}
+                  {deviceRefreshState === "refreshing"
+                    ? "Refreshing"
+                    : deviceRefreshState === "success"
+                      ? "Updated"
+                      : deviceRefreshState === "error"
+                        ? "Failed"
+                        : "Refresh"}
                 </button>
 
                 <button className="primary-action" onClick={() => setIsPanelOpen(true)} type="button">

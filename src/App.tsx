@@ -360,18 +360,25 @@ export default function App() {
   const [fanControlStatus, setFanControlStatus] = useState<FanControlStatus | null>(null);
   const [fanControlAction, setFanControlAction] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [fanControlMessage, setFanControlMessage] = useState("Manual tests return to kernel control after 60 seconds.");
+  const [refreshingDevices, setRefreshingDevices] = useState(false);
 
-  const loadDevices = async () => {
-    setLoading(true);
-    setError(null);
+  const loadDevices = async ({ background = false } = {}) => {
+    if (!background) {
+      setLoading(true);
+    }
 
     try {
       setDevices(await getDevices());
+      setError(null);
+      return true;
     } catch (err) {
       console.error("Error loading devices", err);
       setError("Backend is unreachable or the API token is invalid.");
+      return false;
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
@@ -397,9 +404,59 @@ export default function App() {
     await Promise.all([loadDevices(), loadSystemStatus(), loadLogs()]);
   };
 
+  const refreshDeviceList = async () => {
+    if (refreshingDevices) return;
+    setRefreshingDevices(true);
+    await loadDevices({ background: true });
+    setRefreshingDevices(false);
+  };
+
   useEffect(() => {
     refreshAll();
   }, []);
+
+  useEffect(() => {
+    if (activeView !== "dashboard" && activeView !== "monitoring") {
+      return undefined;
+    }
+
+    let disposed = false;
+    let requestInFlight = false;
+    const intervalSeconds = systemStatus?.operatingMode.mode === "eco" ? 30 : 5;
+
+    const refreshDeviceStatus = async () => {
+      if (disposed || document.visibilityState !== "visible" || requestInFlight) {
+        return;
+      }
+
+      requestInFlight = true;
+      await loadDevices({ background: true });
+      requestInFlight = false;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshDeviceStatus();
+      }
+    };
+
+    refreshDeviceStatus();
+    const intervalId = window.setInterval(refreshDeviceStatus, intervalSeconds * 1000);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeView, systemStatus?.operatingMode.mode]);
+
+  useEffect(() => {
+    setSelectedDevice((current) => {
+      if (!current) return null;
+      return devices.find((device) => device.id === current.id) || null;
+    });
+  }, [devices]);
 
   useEffect(() => {
     if (activeView !== "monitoring") {
@@ -487,7 +544,7 @@ export default function App() {
   }, [devices, searchTerm]);
 
   const onlineCount = devices.filter((device) => device.status === "online").length;
-  const offlineCount = devices.length - onlineCount;
+  const offlineCount = devices.filter((device) => device.status === "offline").length;
   const visibleServiceStatuses = systemStatus?.services || fallbackServiceStatuses;
 
   const saveConnectionConfig = async () => {
@@ -718,6 +775,17 @@ export default function App() {
                     type="text"
                   />
                 </label>
+
+                <button
+                  className="ghost-action device-refresh-action"
+                  disabled={refreshingDevices}
+                  onClick={refreshDeviceList}
+                  title={`Automatic status refresh every ${systemStatus?.operatingMode.mode === "eco" ? 30 : 5} seconds`}
+                  type="button"
+                >
+                  <RefreshCw className={refreshingDevices ? "is-spinning" : ""} size={14} />
+                  {refreshingDevices ? "Refreshing" : "Refresh"}
+                </button>
 
                 <button className="primary-action" onClick={() => setIsPanelOpen(true)} type="button">
                   <Plus size={14} />

@@ -269,6 +269,26 @@ button:disabled {
   border-color: #334155;
 }
 
+.device-refresh-action {
+  min-width: 102px;
+  justify-content: center;
+}
+
+.ghost-action:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.is-spinning {
+  animation: refresh-spin 0.8s linear infinite;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .stats-row {
   max-width: 670px;
   display: grid;

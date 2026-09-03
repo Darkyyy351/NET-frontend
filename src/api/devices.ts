@@ -29,8 +29,14 @@ export interface DeviceCommand {
   updatedAt: string;
 }
 
-export async function getDevices(): Promise<Device[]> {
-  const res = await api.get<ApiResponse<Device[]>>("/devices");
+export async function getDevices({ fresh = false }: { fresh?: boolean } = {}): Promise<Device[]> {
+  const res = await api.get<ApiResponse<Device[]>>("/devices", fresh ? {
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+    params: { refresh: Date.now() },
+  } : undefined);
   return res.data.data;
 }
 

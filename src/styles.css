@@ -274,6 +274,30 @@ button:disabled {
   justify-content: center;
 }
 
+.connection-request {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 24px;
+  color: #e2e8f0;
+  background: #10141c;
+  border: 1px solid #384151;
+  border-radius: 8px;
+  box-shadow: 0 20px 70px #0008;
+}
+.connection-request::backdrop { background: #0009; }
+.connection-request header, .connection-request footer { display: flex; align-items: center; gap: 12px; }
+.connection-request header > svg { color: #34d399; flex-shrink: 0; }
+.connection-request h2 { font-size: 16px; flex: 1; margin: 0; }
+.connection-request h3 { font-size: 22px; margin: 24px 0; overflow-wrap: anywhere; }
+.connection-request dl { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; font-size: 13px; }
+.connection-request dt { color: #94a3b8; }
+.connection-request dd { margin: 0; overflow-wrap: anywhere; }
+.connection-request footer { justify-content: flex-end; margin-top: 24px; flex-wrap: wrap; }
+.connection-request button { display: inline-flex; align-items: center; gap: 8px; }
+.verification-result { font-size: 11px; color: #94a3b8; padding-top: 8px; overflow-wrap: anywhere; }
+
 .device-refresh-action.success {
   color: #34d399;
   border-color: rgba(52, 211, 153, 0.3);

@@ -7,6 +7,7 @@ interface ApiResponse<T> {
 }
 
 export interface Device {
+  admission?: 'pending' | 'approved' | 'rejected';
   id: string;
   name: string;
   ip: string | null;
@@ -20,6 +21,30 @@ export interface Device {
   pendingCommands: number;
 }
 
+export async function getConnectionRequests(): Promise<Device[]> {
+  return (await api.get<ApiResponse<Device[]>>('/devices/requests')).data.data;
+}
+
+export async function decideConnection(id: string, decision: 'approved' | 'rejected') {
+  await api.post(`/devices/${encodeURIComponent(id)}/admission`, { decision });
+}
+
+export type VerificationState = 'checking' | 'confirmed' | 'no-response' | 'unsupported' | 'error';
+
+export async function verifyDevice(id: string): Promise<VerificationState> {
+  const base = `/devices/${encodeURIComponent(id)}/verify`;
+  const start = (await api.post<ApiResponse<{ id?: string; status: string }>>(base)).data.data;
+  if (start.status === 'unsupported') return 'unsupported';
+  if (!start.id) throw new Error('Invalid verification response');
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    const result = (await api.get<ApiResponse<{ status: VerificationState }>>(`${base}/${encodeURIComponent(start.id)}`)).data.data;
+    if (result.status !== 'checking') return result.status;
+    await new Promise(resolve => setTimeout(resolve, 750));
+  }
+  return 'error';
+}
+
 export interface DeviceCommand {
   id: string;
   type: string;
@@ -31,10 +56,6 @@ export interface DeviceCommand {
 
 export async function getDevices({ fresh = false }: { fresh?: boolean } = {}): Promise<Device[]> {
   const res = await api.get<ApiResponse<Device[]>>("/devices", fresh ? {
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
     params: { refresh: Date.now() },
   } : undefined);
   return res.data.data;

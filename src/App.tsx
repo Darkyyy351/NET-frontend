@@ -35,6 +35,8 @@ import {
   Zap,
 } from "lucide-react";
 import { AddDevicePanel } from "./components/AddDevicePanel";
+import { ConnectionRequest } from './components/ConnectionRequest';
+import { getConnectionRequests, verifyDevice, type VerificationState } from './api/devices';
 import { deleteDevice, getDeviceCommands, getDevices, queueCommand, type Device } from "./api/devices";
 import { getLogs, type EventLog } from "./api/logs";
 import {
@@ -347,6 +349,25 @@ export default function App() {
   const [devicePendingRemoval, setDevicePendingRemoval] = useState<Device | null>(null);
   const [deleteState, setDeleteState] = useState<"idle" | "deleting" | "error">("idle");
   const [devices, setDevices] = useState<Device[]>([]);
+  const [requests, setRequests] = useState<Device[]>([]);
+  const [dismissedRequests, setDismissedRequests] = useState<string[]>([]);
+  const [verification, setVerification] = useState<Record<string, { state: VerificationState; at: string }>>({});
+  const activeRequest = requests.find(d => !dismissedRequests.includes(d.id));
+
+  useEffect(() => {
+    let disposed = false;
+    let busy = false;
+    const poll = async () => {
+      if (busy || document.visibilityState !== 'visible') return;
+      busy = true;
+      try { const result = await getConnectionRequests(); if (!disposed) setRequests(result); }
+      catch { /* Older backends do not expose admission requests. */ }
+      finally { busy = false; }
+    };
+    void poll();
+    const interval = window.setInterval(poll, 5000);
+    return () => { disposed = true; window.clearInterval(interval); };
+  }, []);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [eventLogs, setEventLogs] = useState<EventLog[]>(fallbackLogs);
   const [commandFeedback, setCommandFeedback] = useState<Record<string, CommandFeedback>>({});
@@ -407,8 +428,29 @@ export default function App() {
   const refreshDeviceList = async () => {
     if (deviceRefreshState === "refreshing") return;
     setDeviceRefreshState("refreshing");
-    const success = await loadDevices({ background: true, fresh: true });
-    setDeviceRefreshState(success ? "success" : "error");
+    try {
+      const latest = await getDevices({ fresh: true });
+      setDevices(latest);
+      setError(null);
+      const pending = [...latest];
+      let failed = false;
+      await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
+        while (pending.length) {
+          const device = pending.shift()!;
+          setVerification(current => ({ ...current, [device.id]: { state: 'checking', at: '' } }));
+          let state: VerificationState;
+          try { state = await verifyDevice(device.id); }
+          catch { state = 'error'; }
+          if (state === 'error') failed = true;
+          setVerification(current => ({ ...current, [device.id]: { state, at: new Date().toLocaleTimeString() } }));
+        }
+      }));
+      if (!await loadDevices({ background: true, fresh: true })) failed = true;
+      setDeviceRefreshState(failed ? 'error' : 'success');
+    } catch {
+      setError('Stav zarizeni se nepodarilo overit.');
+      setDeviceRefreshState('error');
+    }
   };
 
   useEffect(() => {
@@ -801,6 +843,9 @@ export default function App() {
                   <Plus size={14} />
                   Add Device
                 </button>
+                {requests.length > 0 && <button className="ghost-action" onClick={() => setDismissedRequests([])} type="button">
+                  <Radio size={14} /> Zadosti ({requests.length})
+                </button>}
               </div>
             </div>
 
@@ -920,6 +965,10 @@ export default function App() {
                       </div>
 
                       {feedback && <div className={`command-feedback ${feedback.state}`}>{feedback.label}</div>}
+                      {verification[device.id] && <div className="verification-result" role="status">
+                        {{ checking: 'Overuji spojeni...', confirmed: 'Spojeni potvrzeno', 'no-response': 'Bez odpovedi', unsupported: 'Firmware nepodporuje overeni', error: 'Overeni selhalo' }[verification[device.id].state]}
+                        {' '}{verification[device.id].at}
+                      </div>}
                     </article>
                   );
                 })}
@@ -1479,6 +1528,9 @@ export default function App() {
         </section>
       )}
       {isPanelOpen && <div className="backdrop" onClick={() => setIsPanelOpen(false)} />}
+      {activeRequest && !isPanelOpen && !selectedDevice && !devicePendingRemoval && <ConnectionRequest key={activeRequest.id} device={activeRequest}
+        onClose={() => setDismissedRequests(current => [...current, activeRequest.id])}
+        onDecided={() => { setRequests(current => current.filter(d => d.id !== activeRequest.id)); void refreshAll(); }} />}
       {selectedDevice && <div className="backdrop" onClick={() => setSelectedDevice(null)} />}
       {devicePendingRemoval && deleteState !== "deleting" && (
         <div className="backdrop" onClick={() => setDevicePendingRemoval(null)} />

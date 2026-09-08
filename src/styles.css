@@ -287,25 +287,49 @@ button:disabled {
   box-shadow: 0 20px 70px #0008;
 }
 .connection-request::backdrop { background: #0009; }
-.rejected-devices { padding: 16px 0; border-block: 1px solid #384151; }
+.rejected-devices { padding: 20px 0; border-block: 1px solid #28303c; }
 .rejected-devices header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.rejected-devices h2 { margin: 0; font-size: 15px; }
+.rejected-devices h2 { margin: 0; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rejected-devices h2 > svg { color: #f0b875; flex-shrink: 0; }
+.request-count { color: #94a3b8; font: 12px monospace; min-width: 20px; text-align: center; }
+.request-icon-button { width: 34px; height: 34px; padding: 0; justify-content: center; flex-shrink: 0; border-radius: 6px; }
+.request-empty { display: flex; align-items: center; gap: 12px; min-height: 76px; margin: 0; }
+.request-empty svg { color: #6fae9b; flex-shrink: 0; }
+.request-device-icon { color: #94a3b8; flex-shrink: 0; }
+.request-restore { min-height: 36px; padding: 8px 12px; border-radius: 6px; font-size: 12px; }
+.request-identity { padding: 24px 0 20px; }
+.request-state { color: #f0b875; font-size: 12px; }
+.request-metadata { font-family: monospace; }
 .rejected-devices p { font-size: 13px; color: #94a3b8; }
 .rejected-device-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid #28303c; flex-wrap: wrap; }
 .rejected-device-row > div { min-width: 0; flex: 1 1 220px; }
 .rejected-device-row strong, .rejected-device-row span { display: block; overflow-wrap: anywhere; }
-.rejected-device-row strong { font-size: 14px; }
+.rejected-device-row strong { font-size: 14px; font-family: monospace; font-weight: 600; }
+.rejected-device-row:last-child { border-bottom: 0; padding-bottom: 0; }
 .rejected-device-row span { font-size: 12px; color: #94a3b8; margin-top: 6px; }
 .rejected-device-row button { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; }
 .connection-request header, .connection-request footer { display: flex; align-items: center; gap: 12px; }
 .connection-request header > svg { color: #34d399; flex-shrink: 0; }
 .connection-request h2 { font-size: 16px; flex: 1; margin: 0; }
-.connection-request h3 { font-size: 22px; margin: 24px 0; overflow-wrap: anywhere; }
-.connection-request dl { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; font-size: 13px; }
+.connection-request h3 { font-size: 20px; margin: 10px 0 0; font-family: monospace; overflow-wrap: anywhere; }
+.connection-request dl { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 14px; font-size: 13px; margin: 0; padding: 20px 0; border-block: 1px solid #28303c; }
 .connection-request dt { color: #94a3b8; }
 .connection-request dd { margin: 0; overflow-wrap: anywhere; }
 .connection-request footer { justify-content: flex-end; margin-top: 24px; flex-wrap: wrap; }
 .connection-request button { display: inline-flex; align-items: center; gap: 8px; }
+.connection-request button svg, .request-restore svg { flex-shrink: 0; }
+.connection-request footer button { min-height: 38px; border-radius: 6px; padding: 9px 14px; justify-content: center; }
+.verification-result[data-state="confirmed"] { color: #6ee7b7; }
+.verification-result[data-state="no-response"], .verification-result[data-state="error"] { color: #fda4af; }
+.verification-result[data-state="checking"] { color: #f0b875; }
+@media (max-width: 480px) {
+  .connection-request { padding: 18px; }
+  .connection-request footer button { flex: 1; }
+  .rejected-device-row { gap: 12px; }
+  .rejected-device-row > div { flex-basis: calc(100% - 40px); }
+  .request-restore { margin-left: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { .is-spinning { animation: none !important; } }
 .verification-result { font-size: 11px; color: #94a3b8; padding-top: 8px; overflow-wrap: anywhere; }
 
 .device-refresh-action.success {

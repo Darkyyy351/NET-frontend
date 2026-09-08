@@ -351,6 +351,7 @@ export default function App() {
   const [deleteState, setDeleteState] = useState<"idle" | "deleting" | "error">("idle");
   const [devices, setDevices] = useState<Device[]>([]);
   const [requests, setRequests] = useState<Device[]>([]);
+  const [admissionRevision, setAdmissionRevision] = useState(0);
   const [dismissedRequests, setDismissedRequests] = useState<string[]>([]);
   const [verification, setVerification] = useState<Record<string, { state: VerificationState; at: string }>>({});
   const activeRequest = requests.find(d => !dismissedRequests.includes(d.id));
@@ -449,7 +450,7 @@ export default function App() {
       if (!await loadDevices({ background: true, fresh: true })) failed = true;
       setDeviceRefreshState(failed ? 'error' : 'success');
     } catch {
-      setError('Stav zarizeni se nepodarilo overit.');
+      setError('Stav zařízení se nepodařilo ověřit.');
       setDeviceRefreshState('error');
     }
   };
@@ -966,8 +967,8 @@ export default function App() {
                       </div>
 
                       {feedback && <div className={`command-feedback ${feedback.state}`}>{feedback.label}</div>}
-                      {verification[device.id] && <div className="verification-result" role="status">
-                        {{ checking: 'Overuji spojeni...', confirmed: 'Spojeni potvrzeno', 'no-response': 'Bez odpovedi', unsupported: 'Firmware nepodporuje overeni', error: 'Overeni selhalo' }[verification[device.id].state]}
+                      {verification[device.id] && <div className="verification-result" data-state={verification[device.id].state} role="status">
+                        {{ checking: 'Ověřuji spojení…', confirmed: 'Spojení potvrzeno', 'no-response': 'Bez odpovědi', unsupported: 'Firmware nepodporuje ověření', error: 'Ověření selhalo' }[verification[device.id].state]}
                         {' '}{verification[device.id].at}
                       </div>}
                     </article>
@@ -1170,19 +1171,19 @@ export default function App() {
           <section className="view-stack">
             <div className="view-header compact">
               <div>
-                <h1>Zabezpeceni a Pristupy</h1>
-                <p>Sprava API klicu, autorizacnich tokenu a auditni komunikace.</p>
+                <h1>Zabezpečení a přístupy</h1>
+                <p>Správa API klíčů, autorizačních tokenů a auditní komunikace.</p>
               </div>
             </div>
 
-            <RejectedDevices onReopened={device => {
+            <RejectedDevices key={admissionRevision} onReopened={device => {
               setDismissedRequests(current => current.filter(id => id !== device.id));
               setRequests(current => [...current.filter(d => d.id !== device.id), device]);
             }} />
             <div className="security-card">
               <h3>
                 <KeyRound size={15} />
-                Vygenerovane API klice pro klientska ESP
+                Vygenerované API klíče pro klientská ESP
               </h3>
               <div className="token-row">
                 <div>
@@ -1535,7 +1536,7 @@ export default function App() {
       {isPanelOpen && <div className="backdrop" onClick={() => setIsPanelOpen(false)} />}
       {activeRequest && !isPanelOpen && !selectedDevice && !devicePendingRemoval && <ConnectionRequest key={activeRequest.id} device={activeRequest}
         onClose={() => setDismissedRequests(current => [...current, activeRequest.id])}
-        onDecided={() => { setRequests(current => current.filter(d => d.id !== activeRequest.id)); void refreshAll(); }} />}
+        onDecided={() => { setRequests(current => current.filter(d => d.id !== activeRequest.id)); setAdmissionRevision(v => v + 1); void refreshAll(); }} />}
       {selectedDevice && <div className="backdrop" onClick={() => setSelectedDevice(null)} />}
       {devicePendingRemoval && deleteState !== "deleting" && (
         <div className="backdrop" onClick={() => setDevicePendingRemoval(null)} />

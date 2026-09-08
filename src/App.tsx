@@ -67,7 +67,7 @@ const viewItems: Array<{ id: View; label: string; icon: typeof Grid3X3 }> = [
   { id: "monitoring", label: "Monitoring", icon: Activity },
   { id: "logs", label: "Logs", icon: Terminal },
   { id: "security", label: "Security", icon: Shield },
-  { id: "settings", label: "Nastaveni", icon: Settings },
+  { id: "settings", label: "Nastavení", icon: Settings },
 ];
 
 const fallbackLogs: EventLog[] = [
@@ -806,7 +806,7 @@ export default function App() {
             <div className="view-header">
               <div>
                 <h1>Dashboard</h1>
-                <p>Rychly prehled a ovladani aktivnich uzlu v siti.</p>
+                <p>Rychlý přehled a ovládání aktivních uzlů v síti.</p>
               </div>
 
               <div className="view-actions">
@@ -815,7 +815,7 @@ export default function App() {
                   <input
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Hledat zarizeni..."
+                    placeholder="Hledat zařízení..."
                     type="text"
                   />
                 </label>
@@ -846,7 +846,7 @@ export default function App() {
                   Add Device
                 </button>
                 {requests.length > 0 && <button className="ghost-action" onClick={() => setDismissedRequests([])} type="button">
-                  <Radio size={14} /> Zadosti ({requests.length})
+                  <Radio size={14} /> Žádosti ({requests.length})
                 </button>}
               </div>
             </div>
@@ -984,7 +984,7 @@ export default function App() {
             <div className="view-header compact">
               <div>
                 <h1>Hardware & Network Telemetry</h1>
-                <p>Detailni monitoring CM5 zakladny a kvality spojeni klientskych modulu.</p>
+                <p>Detailní monitoring CM5 základny a kvality spojení klientských modulů.</p>
               </div>
               <div className="monitoring-header-actions">
                 <span className={`refresh-rate ${systemStatus?.operatingMode.mode === "eco" ? "eco" : "normal"}`}>
@@ -1140,8 +1140,8 @@ export default function App() {
           <section className="view-stack">
             <div className="view-header compact">
               <div>
-                <h1>Systemovy Event Stream</h1>
-                <p>Chronologicky prehled o deni v siti, prikazech a sitovych stavech.</p>
+                <h1>Systémový Event Stream</h1>
+                <p>Chronologický přehled o dění v síti, příkazech a síťových stavech.</p>
               </div>
               <button className="ghost-action" onClick={loadLogs} type="button">
                 <RefreshCw size={14} />
@@ -1188,7 +1188,7 @@ export default function App() {
               <div className="token-row">
                 <div>
                   <strong>NET_Core_Bearer_Token</strong>
-                  <span>Pouziva: Dashboard, ESP polling, command queue</span>
+                  <span>Používá: Dashboard, ESP polling, command queue</span>
                 </div>
                 <code>****************</code>
               </div>
@@ -1225,8 +1225,8 @@ export default function App() {
           <section className="view-stack">
             <div className="view-header compact">
               <div>
-                <h1>Systemova konfigurace</h1>
-                <p>Sprava parametru aplikace a krizove rizeni zakladny CM5.</p>
+                <h1>Systémová konfigurace</h1>
+                <p>Správa parametrů aplikace a krizové řízení základny CM5.</p>
               </div>
             </div>
 
@@ -1377,8 +1377,8 @@ export default function App() {
                   CM5 Infrastructure Master Control
                 </h3>
                 <p>
-                  Krizove hardwarove povely zatim nejsou aktivni. UI je pripravene, backend endpointy
-                  pridame az s potvrzovacim workflow.
+                  Krizové hardwarové povely zatím nejsou aktivní. UI je připravené, backend endpointy
+                  přidáme až s potvrzovacím workflow.
                 </p>
                 <div className="settings-actions">
                   <button disabled type="button">

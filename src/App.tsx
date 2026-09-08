@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { AddDevicePanel } from "./components/AddDevicePanel";
 import { ConnectionRequest } from './components/ConnectionRequest';
+import { RejectedDevices } from './components/RejectedDevices';
 import { getConnectionRequests, verifyDevice, type VerificationState } from './api/devices';
 import { deleteDevice, getDeviceCommands, getDevices, queueCommand, type Device } from "./api/devices";
 import { getLogs, type EventLog } from "./api/logs";
@@ -1174,6 +1175,10 @@ export default function App() {
               </div>
             </div>
 
+            <RejectedDevices onReopened={device => {
+              setDismissedRequests(current => current.filter(id => id !== device.id));
+              setRequests(current => [...current.filter(d => d.id !== device.id), device]);
+            }} />
             <div className="security-card">
               <h3>
                 <KeyRound size={15} />

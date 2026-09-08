@@ -21,11 +21,11 @@ export interface Device {
   pendingCommands: number;
 }
 
-export async function getConnectionRequests(): Promise<Device[]> {
-  return (await api.get<ApiResponse<Device[]>>('/devices/requests')).data.data;
+export async function getConnectionRequests(status: 'pending' | 'rejected' = 'pending'): Promise<Device[]> {
+  return (await api.get<ApiResponse<Device[]>>('/devices/requests', { params: { status } })).data.data;
 }
 
-export async function decideConnection(id: string, decision: 'approved' | 'rejected') {
+export async function decideConnection(id: string, decision: 'approved' | 'rejected' | 'pending') {
   await api.post(`/devices/${encodeURIComponent(id)}/admission`, { decision });
 }
 

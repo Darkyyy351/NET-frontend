@@ -287,6 +287,16 @@ button:disabled {
   box-shadow: 0 20px 70px #0008;
 }
 .connection-request::backdrop { background: #0009; }
+.rejected-devices { padding: 16px 0; border-block: 1px solid #384151; }
+.rejected-devices header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rejected-devices h2 { margin: 0; font-size: 15px; }
+.rejected-devices p { font-size: 13px; color: #94a3b8; }
+.rejected-device-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid #28303c; flex-wrap: wrap; }
+.rejected-device-row > div { min-width: 0; flex: 1 1 220px; }
+.rejected-device-row strong, .rejected-device-row span { display: block; overflow-wrap: anywhere; }
+.rejected-device-row strong { font-size: 14px; }
+.rejected-device-row span { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+.rejected-device-row button { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; }
 .connection-request header, .connection-request footer { display: flex; align-items: center; gap: 12px; }
 .connection-request header > svg { color: #34d399; flex-shrink: 0; }
 .connection-request h2 { font-size: 16px; flex: 1; margin: 0; }

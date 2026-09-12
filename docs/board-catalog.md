@@ -37,11 +37,12 @@ selection IDs. Hover/focus previews do not change the persistent clicked selecti
 Coordinates use the LaskaKit 615 x 519 reference cropped and rotated by CSS.
 Zoom scrolls within the photo viewport without moving hotspots relative to the image.
 Current asset provenance is in public/boards/LASKAKIT-PINOUT-SOURCE.md.
-Three unlicensed prototype images are ignored by Git and remain local only.
-A fresh clone can use device assignment, purpose, cards and the MIT reference
-under Sources, but the interactive board image is unavailable until a licensed
-asset is supplied at public/boards/nodemcu-laskakit-pinout.png. Do not substitute
-another image without recalibrating hotspot coordinates.
+Three third-party reference images are included at the user's request for the
+private prototype. Permission has not been obtained and these assets are not
+covered by the project's license. Keep the repository private; resolve permission
+or replace the images before any public release. The active image is
+public/boards/nodemcu-laskakit-pinout.png. Do not substitute another image without
+recalibrating hotspot coordinates. Private visibility does not grant a license.
 Power budgets and A0 header voltage limits remain unverified for the physical unit.
 Historical reference-image capability labels are not firmware guarantees; the
 structured profile contains the deliberately restricted initial NET policy.

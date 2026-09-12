@@ -3,7 +3,4 @@ dist/
 .env
 *.log
 
-# Local reference images: redistribution permission not established.
-public/boards/nodemcu-amica-top.jpg
-public/boards/nodemcu-reference-user.png
-public/boards/nodemcu-laskakit-pinout.png
+# Reference images have separate provenance records; no MIT license is implied.

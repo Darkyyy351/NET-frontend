@@ -172,7 +172,12 @@ function logClass(log: EventLog) {
 }
 
 function nodeUptime(device: Device) {
-  return device.lastSeen ? "Not reported" : "No heartbeat";
+  return freshTelemetry(device) ? formatUptime(device.telemetry!.uptimeSeconds) : "N/A";
+}
+
+function freshTelemetry(device: Device) {
+  return device.status === "online" && device.telemetry &&
+    Date.now() - Date.parse(device.telemetry.receivedAt) < 35000;
 }
 
 function pingLabel() {
@@ -293,7 +298,7 @@ function fanState(status: SystemStatus | null): { label: string; tone: CoreTone 
 }
 
 function formatUptime(seconds?: number) {
-  if (!seconds) {
+  if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0) {
     return "N/A";
   }
 
@@ -982,9 +987,12 @@ export default function App() {
                             <span>Signal strength:</span>
                             <strong>
                               <Wifi size={13} className={device.status === "online" ? "signal-on" : "signal-off"} />
-                              N/A
+                              {freshTelemetry(device) ? `${device.telemetry!.rssi} dBm` : "N/A"}
                             </strong>
                           </div>
+                          <div><span>Uptime ESP:</span><strong>{nodeUptime(device)}</strong></div>
+                          <div><span>Volná paměť:</span><strong>{freshTelemetry(device) ? `${(device.telemetry!.freeHeapBytes / 1024).toFixed(1)} kB` : "N/A"}</strong></div>
+                          <div><span>Poslední kontakt:</span><strong>{formatLastSeen(device.lastSeen)}</strong></div>
                         </div>
                       </div>
 

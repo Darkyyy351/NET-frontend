@@ -18,6 +18,7 @@ export interface Device {
   firmware: string | null;
   capabilities: string[];
   lastSeen: string | null;
+  telemetry?: { rssi: number; uptimeSeconds: number; freeHeapBytes: number; receivedAt: string } | null;
   createdAt: string;
   updatedAt: string;
   pendingCommands: number;

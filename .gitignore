@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 *.log
+
+# Reference images have separate provenance records; no MIT license is implied.

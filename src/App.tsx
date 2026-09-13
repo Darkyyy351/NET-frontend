@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { useCardSize } from './components/useCardSize';
 import {
   Activity,
+  Pencil,
+  RotateCcw,
   AlertTriangle,
   Bell,
   Cable,
@@ -35,6 +39,9 @@ import {
   Zap,
 } from "lucide-react";
 import { AddDevicePanel } from "./components/AddDevicePanel";
+import { BoardCatalog } from './components/BoardCatalog';
+import { DeviceBoardAssignment } from './components/DeviceBoardAssignment';
+import { DevicePurpose } from './components/DevicePurpose';
 import { ConnectionRequest } from './components/ConnectionRequest';
 import { RejectedDevices } from './components/RejectedDevices';
 import { getConnectionRequests, verifyDevice, type VerificationState } from './api/devices';
@@ -55,7 +62,7 @@ import { getApiBaseUrl, getApiToken, saveApiConfig } from "./api/axios";
 import { frontendBuild } from "./build";
 import "./styles.css";
 
-type View = "dashboard" | "monitoring" | "logs" | "security" | "settings";
+type View = "dashboard" | "monitoring" | "logs" | "security" | "settings" | "boards";
 type CommandFeedback = {
   state: "sending" | "queued" | "waiting" | "success" | "failed";
   label: string;
@@ -68,6 +75,7 @@ const viewItems: Array<{ id: View; label: string; icon: typeof Grid3X3 }> = [
   { id: "logs", label: "Logs", icon: Terminal },
   { id: "security", label: "Security", icon: Shield },
   { id: "settings", label: "Nastavení", icon: Settings },
+  { id: "boards", label: "Katalog desek", icon: Cpu },
 ];
 
 const fallbackLogs: EventLog[] = [
@@ -342,14 +350,24 @@ function wait(ms: number) {
 }
 
 export default function App() {
+  const cardLayout = useCardSize();
+  const reducedMotion = useReducedMotion();
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  useEffect(() => {
+    if (!selectedDevice) return;
+    const dismiss = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedDevice(null); };
+    window.addEventListener('keydown', dismiss);
+    return () => window.removeEventListener('keydown', dismiss);
+  }, [selectedDevice]);
+  const [boardDeviceId, setBoardDeviceId] = useState<string | null>(null);
   const [devicePendingRemoval, setDevicePendingRemoval] = useState<Device | null>(null);
   const [deleteState, setDeleteState] = useState<"idle" | "deleting" | "error">("idle");
   const [devices, setDevices] = useState<Device[]>([]);
+  const sizingDeviceId = devices.find(device => device.id === cardLayout.activeId)?.id || devices[0]?.id;
   const [requests, setRequests] = useState<Device[]>([]);
   const [admissionRevision, setAdmissionRevision] = useState(0);
   const [dismissedRequests, setDismissedRequests] = useState<string[]>([]);
@@ -786,7 +804,7 @@ export default function App() {
                 <button
                   key={item.id}
                   className={`core-nav-item ${activeView === item.id ? "active" : ""}`}
-                  onClick={() => setActiveView(item.id)}
+                  onClick={() => { setActiveView(item.id); setBoardDeviceId(null); }}
                   type="button"
                 >
                   <Icon size={15} />
@@ -801,6 +819,10 @@ export default function App() {
       </aside>
 
       <main className="core-main">
+        {activeView === 'boards' && (boardDeviceId ? (
+          <BoardCatalog key={boardDeviceId} device={devices.find(device => device.id === boardDeviceId) || null}
+            connectionError={!!error} onBack={() => { setBoardDeviceId(null); setActiveView('dashboard'); }} />
+        ) : <BoardCatalog />)}
         {activeView === "dashboard" && (
           <section className="view-stack">
             <div className="view-header">
@@ -845,6 +867,9 @@ export default function App() {
                   <Plus size={14} />
                   Add Device
                 </button>
+                <button className="ghost-action" type="button" aria-pressed={cardLayout.editing} onClick={() => cardLayout.setEditing(value => !value)}>
+                  {cardLayout.editing ? <CheckCircle2 size={14} /> : <Pencil size={14} />}{cardLayout.editing ? 'Hotovo' : 'Edit'}
+                </button>
                 {requests.length > 0 && <button className="ghost-action" onClick={() => setDismissedRequests([])} type="button">
                   <Radio size={14} /> Žádosti ({requests.length})
                 </button>}
@@ -865,6 +890,13 @@ export default function App() {
                 <strong className="danger">{offlineCount}</strong>
               </div>
             </div>
+            {cardLayout.editing && sizingDeviceId && <div className="card-layout-toolbar">
+              <select aria-label="Upravovaná karta" value={sizingDeviceId} onChange={event => cardLayout.setActiveId(event.target.value)}>{devices.map(device => <option key={device.id} value={device.id}>{device.name}</option>)}</select>
+              <label htmlFor="card-size">Velikost</label>
+              <input id="card-size" type="range" min={280} max={520} step={20} value={cardLayout.sizeOf(sizingDeviceId)} onChange={event => cardLayout.setSize(sizingDeviceId, Number(event.target.value))} />
+              <output htmlFor="card-size">{cardLayout.sizeOf(sizingDeviceId)} px</output>
+              <button className="icon-button" type="button" title="Výchozí velikost této karty" aria-label="Výchozí velikost této karty" onClick={() => cardLayout.setSize(sizingDeviceId, 320)}><RotateCcw size={15} /></button>
+            </div>}
 
             {loading && <div className="state-card">Loading devices...</div>}
             {error && <div className="state-card error">{error}</div>}
@@ -874,7 +906,7 @@ export default function App() {
             )}
 
             {!loading && !error && filteredDevices.length > 0 && (
-              <div className="v4-device-grid">
+              <div className={`v4-device-grid is-sizeable ${cardLayout.editing ? 'is-editing' : ''}`}>
                 {filteredDevices.map((device) => {
                   const feedback = commandFeedback[device.id];
                   const isSending = feedback?.state === "sending" || feedback?.state === "waiting";
@@ -884,7 +916,16 @@ export default function App() {
                     <article
                       className={`v4-device-card ${activeMenuId === device.id ? "menu-open" : ""}`}
                       key={device.id}
+                      style={{ '--card-width': `${cardLayout.sizeOf(device.id)}px`, '--card-height': `${200 + (cardLayout.sizeOf(device.id) - 280) / 3}px` } as CSSProperties}
                     >
+                      {cardLayout.editing && <button className="card-resize-handle" type="button" title="Změnit velikost karet" aria-label={`Změnit velikost karet: ${device.name}`}
+                        onPointerDown={event => cardLayout.start(event, device.id)} onPointerMove={cardLayout.move} onPointerUp={cardLayout.stop} onPointerCancel={cardLayout.stop} onLostPointerCapture={cardLayout.stop}
+                        onKeyDown={event => {
+                          if (['ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
+                            event.preventDefault();
+                            cardLayout.setSize(device.id, event.key === 'Home' ? 280 : event.key === 'End' ? 520 : cardLayout.sizeOf(device.id) + (['ArrowRight', 'ArrowUp'].includes(event.key) ? 20 : -20));
+                          }
+                        }} />}
                       <div>
                         <div className="card-topline">
                           <div className="device-title-row">
@@ -893,6 +934,7 @@ export default function App() {
                             </div>
                             <div>
                               <h2>{device.name}</h2>
+                              {device.purpose && <p className="device-purpose">{device.purpose}</p>}
                               <div className="device-badges">
                                 <span className="device-type">{device.type || "ESP"}</span>
                                 <span className={`card-status-chip ${statusClass}`}>
@@ -1473,8 +1515,10 @@ export default function App() {
       </main>
 
       <AddDevicePanel open={isPanelOpen} onClose={() => setIsPanelOpen(false)} onAdded={refreshAll} />
+      <AnimatePresence>
       {selectedDevice && (
-        <section className="device-detail-modal">
+        <motion.section key="device-details" className="device-detail-modal" role="dialog" aria-modal="true" aria-label="Detail zařízení"
+          style={{ x: '-50%', y: '-50%' }} initial={{ opacity: 0, scale: reducedMotion ? 1 : 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: reducedMotion ? 1 : 0.98 }} transition={{ duration: reducedMotion ? 0 : 0.16 }}>
           <div className="detail-header">
             <div>
               <span className={`card-status-chip ${deviceStatusClass(selectedDevice.status)}`}>
@@ -1487,16 +1531,30 @@ export default function App() {
             </button>
           </div>
 
+          <DevicePurpose key={`purpose-${selectedDevice.id}`} device={selectedDevice} onSaved={updated => {
+            setSelectedDevice(current => current?.id === updated.id ? updated : current);
+            setDevices(current => current.map(device => device.id === updated.id ? updated : device));
+            void loadLogs();
+          }} />
+          <DeviceBoardAssignment key={selectedDevice.id} device={selectedDevice}
+            onSaved={updated => {
+              setSelectedDevice(current => current?.id === updated.id ? updated : current);
+              setDevices(current => current.map(device => device.id === updated.id ? updated : device));
+              void loadLogs();
+            }}
+            onOpen={device => { setBoardDeviceId(device.id); setSelectedDevice(null); setActiveView('boards'); }} />
+          <div className="detail-section-title">Připojení a systém</div>
           <div className="detail-grid">
             <DetailItem label="IP" value={selectedDevice.ip || "Unknown"} />
-            <DetailItem label="Type" value={selectedDevice.type || "ESP"} />
+            <DetailItem label="Typ" value={selectedDevice.type || "ESP"} />
             <DetailItem label="Firmware" value={selectedDevice.firmware || "N/A"} />
-            <DetailItem label="Last seen" value={formatLastSeen(selectedDevice.lastSeen)} />
-            <DetailItem label="Pending commands" value={String(selectedDevice.pendingCommands)} />
-            <DetailItem label="Device ID" value={selectedDevice.id} />
+            <DetailItem label="Poslední kontakt" value={formatLastSeen(selectedDevice.lastSeen)} />
+            <DetailItem label="Čekající příkazy" value={String(selectedDevice.pendingCommands)} />
+            <DetailItem label="ID zařízení" value={selectedDevice.id} />
           </div>
-        </section>
+        </motion.section>
       )}
+      </AnimatePresence>
       {devicePendingRemoval && (
         <section
           className="delete-device-modal"
@@ -1537,7 +1595,7 @@ export default function App() {
       {activeRequest && !isPanelOpen && !selectedDevice && !devicePendingRemoval && <ConnectionRequest key={activeRequest.id} device={activeRequest}
         onClose={() => setDismissedRequests(current => [...current, activeRequest.id])}
         onDecided={() => { setRequests(current => current.filter(d => d.id !== activeRequest.id)); setAdmissionRevision(v => v + 1); void refreshAll(); }} />}
-      {selectedDevice && <div className="backdrop" onClick={() => setSelectedDevice(null)} />}
+      <AnimatePresence>{selectedDevice && <motion.div key="details-backdrop" className="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : 0.16 }} onClick={() => setSelectedDevice(null)} />}</AnimatePresence>
       {devicePendingRemoval && deleteState !== "deleting" && (
         <div className="backdrop" onClick={() => setDevicePendingRemoval(null)} />
       )}

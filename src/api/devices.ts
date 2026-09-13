@@ -10,8 +10,10 @@ export interface Device {
   admission?: 'pending' | 'approved' | 'rejected';
   id: string;
   name: string;
+  purpose?: string;
   ip: string | null;
   type: string;
+  boardProfile?: { id: string; revision: number } | null;
   status: string;
   firmware: string | null;
   capabilities: string[];
@@ -64,6 +66,15 @@ export async function getDevices({ fresh = false }: { fresh?: boolean } = {}): P
 export async function addDevice(device: { name: string; ip: string; type: string }) {
   const res = await api.post<ApiResponse<Device>>("/devices", device);
   return res.data.data;
+}
+
+export async function assignDeviceBoard(id: string, boardProfile: Device['boardProfile']): Promise<Device> {
+  const res = await api.post<ApiResponse<Device>>(`/devices/${encodeURIComponent(id)}/board-profile`, { boardProfile });
+  return res.data.data;
+}
+
+export async function setDevicePurpose(id: string, purpose: string): Promise<Device> {
+  return (await api.post<ApiResponse<Device>>(`/devices/${encodeURIComponent(id)}/purpose`, { purpose })).data.data;
 }
 
 export async function deleteDevice(id: string) {

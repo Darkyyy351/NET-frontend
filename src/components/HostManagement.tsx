@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, CheckCircle2, Download, Power, RefreshCw, X } from 'lucide-react';
 import { api } from '../api/axios';
+import { HoldPowerButton } from './HoldPowerButton';
 
 type Release = { version: string; backend: string; frontend: string; notes: string[] };
 type HostStatus = { available: boolean; powerAvailable: boolean; updateState: string; checkedAt: string | null;
@@ -55,7 +56,7 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
     if (busy) return;
     setBusy(true); setActionError('');
     try {
-      const body = target === 'check' ? {} : { credential, confirmation, ...(target === 'install' ? selectedRelease : {}) };
+      const body = target === 'check' ? {} : { credential, confirmation: target === 'reboot' || target === 'poweroff' ? confirmations[target] : confirmation, ...(target === 'install' ? selectedRelease : {}) };
       const response = await api.post<{ data: HostStatus }>(`/system/host-control/${target}`, body);
       setStatus(response.data.data); setError(''); setAction(null);
     } catch {
@@ -116,9 +117,12 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
       <div className="host-section-heading"><h3 id="host-confirm-title">{actionNames[action]}</h3><button aria-label="Zavřít potvrzení" disabled={busy} onClick={close}><X size={18} /></button></div>
       <p>{action === 'install' ? `Instalace NET ${selectedRelease?.version} krátce přeruší dostupnost. Proběhne záloha dat a kontrola kontejnerů.` : action === 'poweroff' ? 'CM5 se za jednu minutu vypne, včetně NET a dalších služeb. Opětovné zapnutí vyžaduje fyzický zásah nebo samostatný mechanismus probuzení.' : action === 'reboot' ? 'CM5 se za jednu minutu restartuje. Přeruší se všechny služby hostitele, nejen NET.' : 'Zrušení platí jen pro akci, kterou naplánoval NET.'}</p>
       <label>Administrační klíč<input type="password" autoComplete="off" value={credential} disabled={busy} onChange={e => setCredential(e.target.value)} /></label>
-      <label>Napište {confirmations[action]}<input value={confirmation} disabled={busy} autoComplete="off" onChange={e => setConfirmation(e.target.value)} /></label>
+      {action !== 'reboot' && action !== 'poweroff' && <label>Napište {confirmations[action]}<input value={confirmation} disabled={busy} autoComplete="off" onChange={e => setConfirmation(e.target.value)} /></label>}
       {actionError && <p className="host-warning" role="alert">{actionError}</p>}
-      <div className="host-actions"><button disabled={busy} onClick={close}>Zpět</button><button className="host-danger" disabled={busy || credential.length < 32 || confirmation !== confirmations[action]} onClick={() => void perform(action)}>{busy ? 'Odesílám…' : actionNames[action]}</button></div>
+      <div className="host-actions"><button disabled={busy} onClick={close}>Zpět</button>
+        {action === 'reboot' || action === 'poweroff' ? <HoldPowerButton key={`${action}:${credential}`} label={busy ? 'Odesílám…' : actionNames[action]} disabled={busy || credential.length < 32 || !!error || !status?.powerAvailable || !!active} onConfirm={() => void perform(action)} /> :
+          <button className="host-danger" disabled={busy || credential.length < 32 || confirmation !== confirmations[action]} onClick={() => void perform(action)}>{busy ? 'Odesílám…' : actionNames[action]}</button>}
+      </div>
     </div></div>}
   </>;
 }

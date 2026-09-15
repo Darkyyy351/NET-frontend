@@ -120,11 +120,6 @@ export const AddDevicePanel: FC<AddDevicePanelProps> = ({ open, onClose, onAdded
           <option value="relay">Relay node</option>
         </select>
 
-        <div className="modal-future-box">
-          <strong>Future enrollment</strong>
-          <span>Auto discovery, QR pairing and ESP allowlist will plug into this dialog later.</span>
-        </div>
-
         {error && (
           <div className="panel-error" role="alert">
             {error}

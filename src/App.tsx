@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { EventStream } from './components/EventStream';
+import { HostManagement } from './components/HostManagement';
+import { NotificationCenter } from './components/NotificationCenter';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useCardSize } from './components/useCardSize';
 import {
   Activity,
   Pencil,
   RotateCcw,
-  AlertTriangle,
   Bell,
   Cable,
   CheckCircle2,
@@ -23,7 +25,6 @@ import {
   MoreVertical,
   PackageCheck,
   Plus,
-  Power,
   Radio,
   RefreshCw,
   Search,
@@ -36,7 +37,6 @@ import {
   Wifi,
   Wrench,
   X,
-  Zap,
 } from "lucide-react";
 import { AddDevicePanel } from "./components/AddDevicePanel";
 import { BoardCatalog } from './components/BoardCatalog';
@@ -78,45 +78,18 @@ const viewItems: Array<{ id: View; label: string; icon: typeof Grid3X3 }> = [
   { id: "boards", label: "Katalog desek", icon: Cpu },
 ];
 
-const fallbackLogs: EventLog[] = [
-  {
-    id: "fallback-cmd",
-    time: new Date().toISOString(),
-    type: "cmd",
-    level: "info",
-    message: "Core accepted queued command packet for device control",
-    meta: null,
-  },
-  {
-    id: "fallback-auth",
-    time: new Date().toISOString(),
-    type: "auth",
-    level: "info",
-    message: "ESP node authorized through NET bearer token",
-    meta: null,
-  },
-  {
-    id: "fallback-sys",
-    time: new Date().toISOString(),
-    type: "sys",
-    level: "info",
-    message: "CM5 Core health endpoint reported stable uptime",
-    meta: null,
-  },
-];
-
 const fallbackServiceStatuses: SystemService[] = [
   {
     id: "backend-api",
     name: "NET Backend API",
-    status: "live",
-    detail: "Health endpoint + devices API reachable in test mode",
+    status: "unavailable",
+    detail: "Stav API není dostupný.",
   },
   {
     id: "docker-compose",
     name: "Docker Compose Runtime",
-    status: "prepared",
-    detail: "Backend compose exists; frontend container export is being prepared",
+    status: "unavailable",
+    detail: "Běhové prostředí se nepodařilo ověřit.",
   },
   {
     id: "mqtt",
@@ -128,16 +101,15 @@ const fallbackServiceStatuses: SystemService[] = [
 
 const monitoringModules = [
   { title: "Network latency map", value: "planned", text: "Per-device ping, packet loss and local subnet route checks." },
-  { title: "ESP heartbeat telemetry", value: "next", text: "RSSI, firmware, uptime and free heap from heartbeat payloads." },
-  { title: "Storage watchdog", value: "prepared", text: "JSON store size, backup age and future database disk pressure." },
-  { title: "Alert routing", value: "planned", text: "Telegram, dashboard toast and email hooks for offline nodes." },
+  { title: "Storage watchdog", value: "planned", text: "JSON store size, backup age and future database disk pressure." },
+  { title: "Externí upozornění", value: "planned", text: "Telegram a e-mail. Upozornění ve webu a historie dostupnosti jsou implementované." },
 ];
 
 const securityModules = [
-  { title: "API token vault", text: "Rotate dashboard and ESP tokens from a controlled admin flow.", icon: KeyRound },
-  { title: "Device enrollment policy", text: "Allowlist new ESP nodes before they can receive commands.", icon: Shield },
-  { title: "Audit trail", text: "Who sent reboot/identify commands and when the device acknowledged them.", icon: FileText },
-  { title: "Network exposure check", text: "Warn if the API is reachable outside the trusted LAN/VPN.", icon: Eye },
+  { title: "Oddělené přístupy", text: "Samostatné přihlašovací údaje pro dashboard a jednotlivá zařízení.", icon: KeyRound, status: "Plánováno" },
+  { title: "Schvalování zařízení", text: "Přijetí, odmítnutí a opětovné otevření žádosti. Neschválená zařízení nesmí přijímat příkazy.", icon: Shield, status: "Implementováno" },
+  { title: "Záznam událostí", text: "Příkazy, potvrzení a změny zařízení najdete v Logs. Identitu uživatele sdílený token zatím nerozlišuje.", icon: FileText, status: "Základ implementován" },
+  { title: "Kontrola vystavení sítě", text: "Automatické ověření dostupnosti API mimo důvěryhodnou síť zatím není implementováno.", icon: Eye, status: "Plánováno" },
 ];
 
 function formatLastSeen(value: string | null) {
@@ -151,26 +123,6 @@ function formatLastSeen(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatLogTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(new Date(value));
-}
-
-function logClass(log: EventLog) {
-  if (log.level === "error") {
-    return "error";
-  }
-
-  if (log.level === "warn") {
-    return "warn";
-  }
-
-  return log.type;
-}
-
 function nodeUptime(device: Device) {
   return freshTelemetry(device) ? formatUptime(device.telemetry!.uptimeSeconds) : "N/A";
 }
@@ -178,10 +130,6 @@ function nodeUptime(device: Device) {
 function freshTelemetry(device: Device) {
   return device.status === "online" && device.telemetry &&
     Date.now() - Date.parse(device.telemetry.receivedAt) < 35000;
-}
-
-function pingLabel() {
-  return "Not measured";
 }
 
 function deviceStatusClass(status: string) {
@@ -394,7 +342,11 @@ export default function App() {
     return () => { disposed = true; window.clearInterval(interval); };
   }, []);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
-  const [eventLogs, setEventLogs] = useState<EventLog[]>(fallbackLogs);
+  const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
+  const [logsFailed, setLogsFailed] = useState(false);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsUpdatedAt, setLogsUpdatedAt] = useState<string | null>(null);
+  const logsBusy = useRef(false);
   const [commandFeedback, setCommandFeedback] = useState<Record<string, CommandFeedback>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -438,11 +390,19 @@ export default function App() {
   };
 
   const loadLogs = async () => {
+    if (logsBusy.current) return;
+    logsBusy.current = true;
+    setLogsLoading(true);
     try {
       setEventLogs(await getLogs(100));
+      setLogsFailed(false);
+      setLogsUpdatedAt(new Date().toISOString());
     } catch (err) {
       console.warn("Logs endpoint unavailable", err);
-      setEventLogs(fallbackLogs);
+      setLogsFailed(true);
+    } finally {
+      logsBusy.current = false;
+      setLogsLoading(false);
     }
   };
 
@@ -818,9 +778,10 @@ export default function App() {
               );
             })}
           </nav>
+          <div className="notification-nav"><NotificationCenter key={getApiBaseUrl()} scope={getApiBaseUrl()} /></div>
         </div>
 
-        <div className="sidebar-status">CM5 OS - SYSTEM SECURE</div>
+        <div className="sidebar-status">NET CORE - DASHBOARD</div>
       </aside>
 
       <main className="core-main">
@@ -986,7 +947,12 @@ export default function App() {
                           <div>
                             <span>Signal strength:</span>
                             <strong>
-                              <Wifi size={13} className={device.status === "online" ? "signal-on" : "signal-off"} />
+                              <Wifi
+                                size={13}
+                                className={`wifi-signal${freshTelemetry(device) ? "" : " signal-off"}`}
+                                style={{ "--net-rssi-hue": Math.max(0, Math.min(120, ((device.telemetry?.rssi ?? -85) + 85) / 35 * 120)) } as CSSProperties}
+                                aria-hidden="true"
+                              />
                               {freshTelemetry(device) ? `${device.telemetry!.rssi} dBm` : "N/A"}
                             </strong>
                           </div>
@@ -1175,8 +1141,8 @@ export default function App() {
                     <strong>{device.name}</strong>
                     <div className="node-metrics">
                       <MetricInline label="Reported uptime" value={nodeUptime(device)} />
-                      <MetricInline label="Network latency" value={pingLabel()} />
-                      <MetricInline label="Availability history" value="Not tracked" />
+                      <MetricInline label="RSSI" value={freshTelemetry(device) ? `${device.telemetry!.rssi} dBm` : "N/A"} />
+                      <MetricInline label="Volná paměť" value={freshTelemetry(device) ? `${(device.telemetry!.freeHeapBytes / 1024).toFixed(1)} kB` : "N/A"} />
                       <MetricInline label="Last seen" value={formatLastSeen(device.lastSeen)} />
                     </div>
                   </div>
@@ -1193,27 +1159,9 @@ export default function App() {
                 <h1>Systémový Event Stream</h1>
                 <p>Chronologický přehled o dění v síti, příkazech a síťových stavech.</p>
               </div>
-              <button className="ghost-action" onClick={loadLogs} type="button">
-                <RefreshCw size={14} />
-                Refresh
-              </button>
             </div>
 
-            <div className="log-panel">
-              <div className="log-title">
-                <span>cm5_event_handler.log</span>
-                <em>STREAMING</em>
-              </div>
-              <div className="log-lines">
-                {eventLogs.map((log) => (
-                  <div className="log-line" key={log.id}>
-                    <span>[{formatLogTime(log.time)}]</span>
-                    <i className={logClass(log)}>{log.type}</i>
-                    <p>{log.message}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <EventStream logs={eventLogs} failed={logsFailed} loading={logsLoading} updatedAt={logsUpdatedAt} refresh={loadLogs} />
           </section>
         )}
 
@@ -1233,7 +1181,7 @@ export default function App() {
             <div className="security-card">
               <h3>
                 <KeyRound size={15} />
-                Vygenerované API klíče pro klientská ESP
+                Sdílený API token
               </h3>
               <div className="token-row">
                 <div>
@@ -1248,7 +1196,7 @@ export default function App() {
                     <Lock size={13} />
                     Token rotation
                   </strong>
-                  <span>Prepared for NET 1.0; manual .env update for now.</span>
+                  <span>Ruční změna v .env a konfiguraci klientů. Automatická rotace zatím není dostupná.</span>
                 </div>
                 <code>legacy mode</code>
               </div>
@@ -1263,7 +1211,7 @@ export default function App() {
                     <Icon size={18} />
                     <strong>{module.title}</strong>
                     <p>{module.text}</p>
-                    <span>future hook</span>
+                    <span>{module.status}</span>
                   </div>
                 );
               })}
@@ -1272,7 +1220,8 @@ export default function App() {
         )}
 
         {activeView === "settings" && (
-          <section className="view-stack">
+          <HostManagement>{({ updates, power }) => (
+          <section className="view-stack settings-content">
             <div className="view-header compact">
               <div>
                 <h1>Systémová konfigurace</h1>
@@ -1280,6 +1229,7 @@ export default function App() {
               </div>
             </div>
 
+            <h2 className="settings-section-title">Provoz a chlazení</h2>
             <div className="power-mode-panel">
               <div className="power-mode-copy">
                 <div className="power-mode-title">
@@ -1381,6 +1331,9 @@ export default function App() {
               </div>
             </section>
 
+            {power}
+
+            <h2 className="settings-section-title">Připojení a služby</h2>
             <div className="settings-grid">
               <div className="config-panel">
                 <h3>
@@ -1421,27 +1374,6 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="danger-panel">
-                <h3>
-                  <AlertTriangle size={15} />
-                  CM5 Infrastructure Master Control
-                </h3>
-                <p>
-                  Krizové hardwarové povely zatím nejsou aktivní. UI je připravené, backend endpointy
-                  přidáme až s potvrzovacím workflow.
-                </p>
-                <div className="settings-actions">
-                  <button disabled type="button">
-                    <RefreshCw size={14} />
-                    Reboot CM5 Core
-                  </button>
-                  <button disabled className="danger" type="button">
-                    <Power size={14} />
-                    Shutdown Core
-                  </button>
-                </div>
-              </div>
-
               <div className="services-panel">
                 <h3>
                   <Database size={15} />
@@ -1452,7 +1384,6 @@ export default function App() {
                     key={service.id}
                     name={service.name}
                     status={service.status}
-                    disabled={service.status === "planned"}
                   />
                 ))}
               </div>
@@ -1494,23 +1425,24 @@ export default function App() {
                   detail={shortCommit(systemStatus?.deployment.frontend?.commit || frontendBuild.commit)}
                 />
               </div>
+              {updates}
             </div>
 
             <div className="settings-grid wide">
               <SettingsCard
                 icon={CheckCircle2}
                 title="Readiness Checklist"
-                items={["Backend API stable", "Frontend container healthy", "Controlled CM5 updates", "ESP telemetry pending"]}
+                items={["Implementováno: verzované API a perzistence", "Implementováno: Docker nasazení", "Implementováno: řízené aktualizace CM5", "Implementováno: ESP telemetrie a schvalování"]}
               />
               <SettingsCard
                 icon={Cable}
                 title="Network Profile"
-                items={["LAN-only API mode", "CORS origin controlled by .env", "Future VPN profile", "Future mDNS/UDP discovery"]}
+                items={["CORS konfigurace přes .env", "CORS nenahrazuje firewall ani omezení na LAN", "Plánováno: VPN profil", "Plánováno: mDNS/UDP discovery"]}
               />
               <SettingsCard
                 icon={Bell}
                 title="Notification Routes"
-                items={["Dashboard event stream", "Future Telegram bot", "Future email alerts", "Future offline escalation"]}
+                items={["Implementováno: hledání, filtry a export událostí", "Implementováno: odpojení a návrat zařízení", "Implementováno: historie a ztišení upozornění", "Plánováno: Telegram a e-mail"]}
               />
               <SettingsCard
                 icon={Wrench}
@@ -1519,6 +1451,7 @@ export default function App() {
               />
             </div>
           </section>
+          )}</HostManagement>
         )}
       </main>
 
@@ -1648,7 +1581,7 @@ function MetricInline({ label, value, tone }: { label: string; value: string; to
   );
 }
 
-function ServiceRow({ name, status, disabled }: { name: string; status?: string; disabled?: boolean }) {
+function ServiceRow({ name, status }: { name: string; status?: string }) {
   return (
     <div className="service-row">
       <span>
@@ -1656,10 +1589,6 @@ function ServiceRow({ name, status, disabled }: { name: string; status?: string;
         {name}
       </span>
       {status && <em className={`service-row-status ${status}`}>{status}</em>}
-      <button disabled={disabled} type="button">
-        <Zap size={13} />
-        Restart Service
-      </button>
     </div>
   );
 }

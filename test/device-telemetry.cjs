@@ -28,6 +28,20 @@ const os = require('node:os');
         assert.equal(text.includes('-63 dBm'), state === 'live');
         assert.equal(text.includes('32.0 kB'), state === 'live');
         assert.equal(text.includes('0h 0m'), state === 'live');
+        const signal = card.locator('.wifi-signal');
+        if (state === 'live') {
+          assert.equal(await signal.evaluate(e => Number(e.style.getPropertyValue('--net-rssi-hue')) > 0), true);
+          await signal.evaluate(e => e.style.setProperty('--net-rssi-hue', '0'));
+          await page.waitForTimeout(1000);
+          await signal.evaluate(e => e.style.setProperty('--net-rssi-hue', '120'));
+          await page.waitForTimeout(450);
+          const hue = await signal.evaluate(e => Number(getComputedStyle(e).getPropertyValue('--net-rssi-hue')));
+          assert.ok(hue > 0 && hue < 120, `Expected intermediate hue, got ${hue}`);
+          await page.waitForTimeout(600);
+          assert.equal(await signal.evaluate(e => Number(getComputedStyle(e).getPropertyValue('--net-rssi-hue'))), 120);
+        } else {
+          assert.ok(await signal.evaluate(e => e.classList.contains('signal-off')));
+        }
         assert.equal(await card.evaluate(e => e.scrollWidth <= e.clientWidth), true);
         const metrics = await card.locator('.device-card-data').boundingBox();
         const footer = await card.locator('.card-footer').boundingBox();

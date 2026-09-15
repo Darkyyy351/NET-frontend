@@ -45,7 +45,11 @@ export function EventStream({ logs, failed, loading, updatedAt, refresh }: {
       <select aria-label="Typ události" value={type} onChange={e => setType(e.target.value)}>
         <option value="all">Všechny typy</option>{[...new Set([...types, ...(type === 'all' ? [] : [type])])].map(value => <option key={value} value={value}>{value}</option>)}
       </select>
-      <label className="event-auto"><input type="checkbox" checked={automatic} onChange={e => setAutomatic(e.target.checked)} /> Automaticky</label>
+      <label className={`event-auto ${automatic ? 'active' : ''}`}>
+        <input type="checkbox" aria-label="Automaticky" checked={automatic} onChange={e => setAutomatic(e.target.checked)} />
+        <span className="event-auto-switch" aria-hidden="true"><i /></span>
+        <span><strong>Automaticky</strong><small>{automatic ? 'Každých 5 s' : 'Vypnuto'}</small></span>
+      </label>
       <button className="ghost-action" type="button" title="Obnovit události" aria-label="Obnovit události" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} /></button>
       <button className="ghost-action" type="button" title="Export filtrovaných událostí (JSON)" aria-label="Export filtrovaných událostí" disabled={!filtered.length} onClick={exportLogs}><Download size={16} /></button>
     </div>

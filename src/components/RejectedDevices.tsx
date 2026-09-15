@@ -30,13 +30,24 @@ export function RejectedDevices({ onReopened }: { onReopened: (device: Device) =
     finally { setBusy(null); }
   };
   return <section className="rejected-devices" aria-labelledby="rejected-title">
-    <header><h2 id="rejected-title"><ShieldX size={18} />Zamítnuté žádosti <span className="request-count">{loading ? '…' : devices.length}</span></h2>
-      <button className="ghost-action request-icon-button" title="Obnovit seznam" aria-label="Obnovit zamítnuté žádosti" disabled={loading || !!busy} onClick={() => setRevision(v => v + 1)}><RefreshCw size={16} className={loading ? 'is-spinning' : ''} /></button></header>
+    <header className="rejected-header">
+      <div className="rejected-heading">
+        <span className="rejected-heading-icon"><ShieldX size={20} /></span>
+        <div><span className="rejected-kicker">Řízení zařízení</span><h2 id="rejected-title">Zamítnuté žádosti</h2>
+          <p>Zařízení, kterým byl odepřen přístup. Žádost lze bezpečně vrátit do fronty ke schválení.</p></div>
+      </div>
+      <div className="rejected-header-actions"><span className="request-count"><strong>{loading ? '…' : devices.length}</strong> zamítnuto</span>
+        <button className="ghost-action request-icon-button" title="Obnovit seznam" aria-label="Obnovit zamítnuté žádosti" disabled={loading || !!busy} onClick={() => setRevision(v => v + 1)}><RefreshCw size={16} className={loading ? 'is-spinning' : ''} /></button></div>
+    </header>
     {error && <p className="panel-error" role="alert">{error}</p>}
-    {loading ? <p className="request-empty" role="status">Načítám žádosti…</p> : !error && devices.length === 0 ? <p className="request-empty"><ShieldCheck size={20} />Žádné zamítnuté žádosti</p> : devices.map(device => <div className="rejected-device-row" key={device.id}>
-      <Cpu size={20} className="request-device-icon" />
-      <div><strong>{device.id}</strong><span>{device.name}</span><span className="request-metadata">{device.ip || 'Neznámá IP'} · {device.firmware || 'Neznámý firmware'}</span></div>
-      <button className="ghost-action request-restore" disabled={!!busy} onClick={() => reopen(device)}><RotateCcw size={15} className={busy === device.id ? 'is-spinning' : ''} />{busy === device.id ? 'Obnovuji…' : 'Vrátit ke schválení'}</button>
-    </div>)}
+    <div className="rejected-list">
+      {loading ? <div className="request-empty" role="status"><RefreshCw size={20} className="is-spinning" /><div><strong>Načítám žádosti</strong><span>Kontroluji seznam zamítnutých zařízení…</span></div></div> :
+        !error && devices.length === 0 ? <div className="request-empty clear"><ShieldCheck size={22} /><div><strong>Fronta je čistá</strong><span>Žádné zamítnuté žádosti.</span></div></div> : devices.map(device => <div className="rejected-device-row" key={device.id}>
+          <span className="request-device-icon"><Cpu size={19} /></span>
+          <div className="rejected-device-copy"><strong>{device.name}</strong><code>{device.id}</code>
+            <div className="request-metadata"><span>{device.ip || 'Neznámá IP'}</span><span>{device.firmware || 'Neznámý firmware'}</span></div></div>
+          <button className="ghost-action request-restore" disabled={!!busy} onClick={() => reopen(device)}><RotateCcw size={15} className={busy === device.id ? 'is-spinning' : ''} />{busy === device.id ? 'Obnovuji…' : 'Vrátit ke schválení'}</button>
+        </div>)}
+    </div>
   </section>;
 }

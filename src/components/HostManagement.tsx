@@ -87,12 +87,16 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
     </section>
     {!powerOperation && feedback}
   </div>;
-  const power = <section className="host-power" aria-label="CM5 Infrastructure Master Control">
-      <div className="host-section-heading"><h3><AlertTriangle size={16} /> CM5 Infrastructure Master Control</h3>
-        <span className={`release-badge ${active ? 'occupied' : status?.powerAvailable && !error ? 'current' : 'unavailable'}`}>{error ? 'Nedostupné' : active ? 'Probíhá akce' : status?.powerAvailable ? 'Připraveno' : 'Nedostupné'}</span></div>
-      <div className="host-actions">
-        <button className="ghost-action" disabled={!status?.powerAvailable || !!error || busy || !!active} onClick={() => open('reboot')}><RefreshCw size={15} /> Restartovat CM5</button>
-        <button className="host-danger" disabled={!status?.powerAvailable || !!error || busy || !!active} onClick={() => open('poweroff')}><Power size={15} /> Vypnout CM5</button>
+  const power = <section className="host-power" aria-label="CM5 Master Control">
+      <div className="master-control-main">
+        <span className="master-control-icon"><AlertTriangle size={21} /></span>
+        <div className="master-control-copy"><span className="master-control-kicker">Řízení systému</span><h3>CM5 Master Control</h3>
+          <p>Řízení celého hostitele. Restart i vypnutí ovlivní NET a všechny ostatní služby na CM5.</p></div>
+        <span className={`master-control-status ${active ? 'occupied' : status?.powerAvailable && !error ? 'ready' : 'unavailable'}`}><i />{error ? 'Nedostupné' : active ? 'Probíhá akce' : status?.powerAvailable ? 'Připraveno' : 'Nedostupné'}</span>
+      </div>
+      <div className="master-control-actions">
+        <button className="master-restart" aria-label="Restartovat CM5" disabled={!status?.powerAvailable || !!error || busy || !!active} onClick={() => open('reboot')}><span><RefreshCw size={17} /></span><div><strong>Restartovat CM5</strong><small>Bezpečný restart hostitele</small></div></button>
+        <button className="master-poweroff" aria-label="Vypnout CM5" disabled={!status?.powerAvailable || !!error || busy || !!active} onClick={() => open('poweroff')}><span><Power size={17} /></span><div><strong>Vypnout CM5</strong><small>Vyžaduje následné zapnutí</small></div></button>
         {status?.operation.state === 'scheduled' && <button className="ghost-action" disabled={busy || !!error} onClick={() => open('cancel-power')}>Zrušit naplánovanou akci</button>}
       </div>
       {powerOperation && feedback}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, CircleCheckBig, CircleX, Clock3, Download, Power, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleCheckBig, CircleX, Clock3, Download, LoaderCircle, Power, RefreshCw, X } from 'lucide-react';
 import { api } from '../api/axios';
 import { HoldPowerButton } from './HoldPowerButton';
 
@@ -74,6 +74,7 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
   const resultKey = resultState ? `${resultState}:${status?.operation.version || 'unknown'}:${status?.operation.at || 'unknown'}` : '';
   const resultTime = status?.operation.at ? Date.parse(status.operation.at) : NaN;
   const showResult = !!resultState && resultKey !== dismissedResult && Number.isFinite(resultTime) && Math.abs(Date.now() - resultTime) < 86_400_000;
+  const updateFrameState = status?.operation.state === 'installing' ? 'installing' : showResult ? resultState : null;
   const dismissResult = () => {
     window.localStorage.setItem('net-update-result-dismissed', resultKey);
     setDismissedResult(resultKey);
@@ -147,14 +148,16 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
           <button className="host-danger" disabled={busy || credential.length < 32 || confirmation !== confirmations[action]} onClick={() => void perform(action)}>{busy ? 'Odesílám…' : actionNames[action]}</button>}
       </div>
     </div></div>}
-    {showResult && <div className={`update-result-backdrop ${resultState}`}><section className="update-result" role="alertdialog" aria-modal="true" aria-labelledby="update-result-title">
-      <span className="update-result-icon">{resultState === 'succeeded' ? <CircleCheckBig size={30} /> : <CircleX size={30} />}</span>
-      <span className="update-result-kicker">NET {status?.operation.version || 'update'}</span>
-      <h3 id="update-result-title">{resultState === 'succeeded' ? 'Aktualizace úspěšná' : 'Aktualizace neúspěšná'}</h3>
-      <p>{resultState === 'succeeded' ? 'Nová verze je nasazená a služby prošly kontrolou. Obnovte stránku, aby se načetlo aktuální rozhraní.' : 'Původní verze zůstala nebo byla obnovena. Podrobnosti najdete v hostitelském update.log.'}</p>
-      <div className="update-result-actions">
-        {resultState === 'succeeded' && <button className="update-refresh" onClick={() => window.location.reload()}><RefreshCw size={15} /> Obnovit stránku</button>}
-        <button autoFocus className="update-done" onClick={dismissResult}>Hotovo</button>
+    {updateFrameState && <div className={`update-result-backdrop ${updateFrameState}`}><section className="update-result" role={updateFrameState === 'installing' ? 'dialog' : 'alertdialog'} aria-live="polite" aria-modal="true" aria-labelledby="update-result-title">
+      <div className="update-stage-content" key={updateFrameState}>
+        <span className="update-result-icon">{updateFrameState === 'installing' ? <LoaderCircle className="update-install-spinner" size={30} /> : updateFrameState === 'succeeded' ? <CircleCheckBig size={30} /> : <CircleX size={30} />}</span>
+        <span className="update-result-kicker">NET {status?.operation.version || selectedRelease?.version || 'update'}</span>
+        <h3 id="update-result-title">{updateFrameState === 'installing' ? 'Aktualizace se instaluje' : updateFrameState === 'succeeded' ? 'Aktualizace úspěšná' : 'Aktualizace neúspěšná'}</h3>
+        <p>{updateFrameState === 'installing' ? 'Probíhá záloha dat, sestavení obrazů a kontrola služeb. NET může být krátce nedostupný.' : updateFrameState === 'succeeded' ? 'Nová verze je nasazená a služby prošly kontrolou. Obnovte stránku, aby se načetlo aktuální rozhraní.' : 'Původní verze zůstala nebo byla obnovena. Podrobnosti najdete v hostitelském update.log.'}</p>
+        {updateFrameState === 'installing' ? <span className="update-progress-dots" aria-label="Instalace probíhá"><i /><i /><i /></span> : <div className="update-result-actions">
+          {updateFrameState === 'succeeded' && <button className="update-refresh" onClick={() => window.location.reload()}><RefreshCw size={15} /> Obnovit stránku</button>}
+          <button autoFocus className="update-done" onClick={dismissResult}>Hotovo</button>
+        </div>}
       </div>
     </section></div>}
   </>;

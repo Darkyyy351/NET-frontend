@@ -79,6 +79,10 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
     window.localStorage.setItem('net-update-result-dismissed', resultKey);
     setDismissedResult(resultKey);
   };
+  const completeUpdate = () => {
+    dismissResult();
+    window.location.reload();
+  };
   const feedback = <>
     {status && !['idle', 'succeeded', 'failed'].includes(status.operation.state) && <p className="host-operation" role="status">{({ installing: 'Probíhá instalace. Připojení může být dočasně přerušeno.', scheduled: 'Power akce je naplánovaná za jednu minutu.', interrupted: 'Předchozí operace byla přerušena nebo hostitel restartován. Ověřte jeho stav.', cancelled: 'Naplánovaná akce byla zrušena.' } as Record<string, string>)[status.operation.state] || status.operation.state}</p>}
   </>;
@@ -98,7 +102,7 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
         <button className="ghost-action" disabled={busy || !!active || !status?.available || !!error || status.checking} onClick={() => void perform('check')}><RefreshCw size={15} />{status?.checking ? 'Ověřuji…' : 'Ověřit nyní'}</button>
         <button className="primary" disabled={busy || !!active || tone !== 'available' || !status?.available} onClick={() => open('install')}><Download size={15} /> Instalovat</button>
       </div>
-      <p className="host-caption">Automatická kontrola každých 15 minut. Instalace vyžaduje bezpečnostní potvrzení.</p>
+      <p className="host-caption">Automatická kontrola každých 15 minut. Instalace pouze po potvrzení.</p>
       <div className="update-history">
         <div className="update-history-heading"><Clock3 size={15} /><div><strong>Historie aktualizací</strong><span>Poslední výsledky nasazení</span></div></div>
         <div className="update-history-list">
@@ -155,8 +159,8 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
         <h3 id="update-result-title">{updateFrameState === 'installing' ? 'Aktualizace se instaluje' : updateFrameState === 'succeeded' ? 'Aktualizace úspěšná' : 'Aktualizace neúspěšná'}</h3>
         <p>{updateFrameState === 'installing' ? 'Probíhá záloha dat, sestavení obrazů a kontrola služeb. NET může být krátce nedostupný.' : updateFrameState === 'succeeded' ? 'Nová verze je nasazená a služby prošly kontrolou. Obnovte stránku, aby se načetlo aktuální rozhraní.' : 'Původní verze zůstala nebo byla obnovena. Podrobnosti najdete v hostitelském update.log.'}</p>
         {updateFrameState === 'installing' ? <span className="update-progress-dots" aria-label="Instalace probíhá"><i /><i /><i /></span> : <div className="update-result-actions">
-          {updateFrameState === 'succeeded' && <button className="update-refresh" onClick={() => window.location.reload()}><RefreshCw size={15} /> Obnovit stránku</button>}
-          <button autoFocus className="update-done" onClick={dismissResult}>Hotovo</button>
+          {updateFrameState === 'succeeded' ? <button autoFocus className="update-refresh" onClick={completeUpdate}><RefreshCw size={15} /> Obnovit stránku &amp; dokončit</button> :
+            <button autoFocus className="update-done" onClick={dismissResult}>Hotovo</button>}
         </div>}
       </div>
     </section></div>}

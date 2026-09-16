@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, LockKeyhole } from 'lucide-react';
 
-export function HoldPowerButton({ label, disabled, onConfirm }: {
-  label: string; disabled: boolean; onConfirm: () => void;
+export function HoldPowerButton({ label, disabled, onConfirm, tone = 'danger' }: {
+  label: string; disabled: boolean; onConfirm: () => void; tone?: 'danger' | 'install';
 }) {
   const [holding, setHolding] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -32,7 +32,7 @@ export function HoldPowerButton({ label, disabled, onConfirm }: {
     };
   }, []);
   useEffect(() => { if (disabled) { stop(); setUnlocked(false); } }, [disabled]);
-  return <button type="button" className={`host-danger hold-power-button ${holding ? 'holding' : ''} ${unlocked ? 'unlocked' : ''}`}
+  return <button type="button" className={`host-danger hold-power-button ${tone} ${holding ? 'holding' : ''} ${unlocked ? 'unlocked' : ''}`}
     aria-label={label} disabled={disabled}
     onPointerDown={e => { if (e.button === 0 && !unlocked) start(); }}
     onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop} onBlur={stop}

@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, Download, Power, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleCheckBig, CircleX, Clock3, Download, Power, RefreshCw, X } from 'lucide-react';
 import { api } from '../api/axios';
 import { HoldPowerButton } from './HoldPowerButton';
 
 type Release = { version: string; backend: string; frontend: string; notes: string[] };
+type UpdateHistoryEntry = { version: string; state: 'baseline' | 'succeeded' | 'failed' | string; at: string | null; message?: string };
 type HostStatus = { available: boolean; powerAvailable: boolean; updateState: string; checkedAt: string | null;
   checking: boolean; error?: string; release: Release | null;
-  operation: { state: string; message?: string; version?: string; action?: string } };
+  operation: { state: string; message?: string; version?: string; action?: string; at?: string };
+  history?: UpdateHistoryEntry[] };
 type Action = 'install' | 'reboot' | 'poweroff' | 'cancel-power';
 const labels: Record<string, string> = { current: 'Verze je aktuální', available: 'Dostupná aktualizace',
   unchecked: 'Zatím neověřeno', unavailable: 'Kontrola není dostupná', installing: 'Probíhá instalace' };
 const confirmations: Record<Action, string> = { install: 'UPDATE NET', reboot: 'RESTART CM5', poweroff: 'VYPNOUT CM5', 'cancel-power': 'ZRUSIT' };
 const actionNames: Record<Action, string> = { install: 'Instalovat aktualizaci', reboot: 'Restartovat CM5', poweroff: 'Vypnout CM5', 'cancel-power': 'Zrušit naplánovanou akci' };
+const baselineHistory: UpdateHistoryEntry[] = [{ version: '0.2.0-dev.2', state: 'baseline', at: null }];
 
 export function HostManagement({ children }: { children: (panels: { updates: ReactNode; power: ReactNode }) => ReactNode }) {
   const [status, setStatus] = useState<HostStatus | null>(null);
@@ -21,6 +24,7 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
   const [credential, setCredential] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [dismissedResult, setDismissedResult] = useState(() => window.localStorage.getItem('net-update-result-dismissed') || '');
   const dialog = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -56,7 +60,7 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
     if (busy) return;
     setBusy(true); setActionError('');
     try {
-      const body = target === 'check' ? {} : { credential, confirmation: target === 'reboot' || target === 'poweroff' ? confirmations[target] : confirmation, ...(target === 'install' ? selectedRelease : {}) };
+      const body = target === 'check' ? {} : { credential, confirmation: target === 'cancel-power' ? confirmation : confirmations[target], ...(target === 'install' ? selectedRelease : {}) };
       const response = await api.post<{ data: HostStatus }>(`/system/host-control/${target}`, body);
       setStatus(response.data.data); setError(''); setAction(null);
     } catch {
@@ -65,8 +69,17 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
   };
   const tone = error ? 'unavailable' : status?.operation.state === 'installing' ? 'installing' : status?.updateState || 'unchecked';
   const powerOperation = !!status?.operation.action || status?.operation.state === 'cancelled';
+  const history = status?.history?.length ? status.history : baselineHistory;
+  const resultState = status?.operation.state === 'succeeded' || status?.operation.state === 'failed' ? status.operation.state : null;
+  const resultKey = resultState ? `${resultState}:${status?.operation.version || 'unknown'}:${status?.operation.at || 'unknown'}` : '';
+  const resultTime = status?.operation.at ? Date.parse(status.operation.at) : NaN;
+  const showResult = !!resultState && resultKey !== dismissedResult && Number.isFinite(resultTime) && Math.abs(Date.now() - resultTime) < 86_400_000;
+  const dismissResult = () => {
+    window.localStorage.setItem('net-update-result-dismissed', resultKey);
+    setDismissedResult(resultKey);
+  };
   const feedback = <>
-    {status && status.operation.state !== 'idle' && <p className="host-operation" role="status">{({ installing: 'Probíhá instalace. Připojení může být dočasně přerušeno.', scheduled: 'Power akce je naplánovaná za jednu minutu.', succeeded: 'Aktualizace dokončena. Obnovte stránku.', failed: 'Aktualizace selhala. Zkontrolujte hostitelský log.', interrupted: 'Předchozí operace byla přerušena nebo hostitel restartován. Ověřte jeho stav.', cancelled: 'Naplánovaná akce byla zrušena.' } as Record<string, string>)[status.operation.state] || status.operation.state}</p>}
+    {status && !['idle', 'succeeded', 'failed'].includes(status.operation.state) && <p className="host-operation" role="status">{({ installing: 'Probíhá instalace. Připojení může být dočasně přerušeno.', scheduled: 'Power akce je naplánovaná za jednu minutu.', interrupted: 'Předchozí operace byla přerušena nebo hostitel restartován. Ověřte jeho stav.', cancelled: 'Naplánovaná akce byla zrušena.' } as Record<string, string>)[status.operation.state] || status.operation.state}</p>}
   </>;
   const updates = <div className="host-management">
     <section className={`release-status ${tone}`} aria-label="Aktualizace NET">
@@ -85,6 +98,16 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
         <button className="primary" disabled={busy || !!active || tone !== 'available' || !status?.available} onClick={() => open('install')}><Download size={15} /> Instalovat</button>
       </div>
       <p className="host-caption">Automatická kontrola každých 15 minut. Instalace pouze po potvrzení.</p>
+      <div className="update-history">
+        <div className="update-history-heading"><Clock3 size={15} /><div><strong>Historie aktualizací</strong><span>Poslední výsledky nasazení</span></div></div>
+        <div className="update-history-list">
+          {history.slice(0, 5).map((entry, index) => <div className={`update-history-item ${entry.state}`} key={`${entry.version}:${entry.at || index}`}>
+            <span className="update-history-marker">{entry.state === 'succeeded' ? <CheckCircle2 size={14} /> : entry.state === 'failed' ? <CircleX size={14} /> : <Clock3 size={14} />}</span>
+            <div><strong>NET {entry.version}</strong><small>{entry.state === 'succeeded' ? 'Instalace úspěšná' : entry.state === 'failed' ? 'Instalace neúspěšná' : 'Výchozí verze'}</small></div>
+            <time>{entry.at ? new Date(entry.at).toLocaleString() : 'Před zavedením historie'}</time>
+          </div>)}
+        </div>
+      </div>
     </section>
     {!powerOperation && feedback}
   </div>;
@@ -117,12 +140,22 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
       <div className="host-section-heading"><h3 id="host-confirm-title">{actionNames[action]}</h3><button aria-label="Zavřít potvrzení" disabled={busy} onClick={close}><X size={18} /></button></div>
       <p>{action === 'install' ? `Instalace NET ${selectedRelease?.version} krátce přeruší dostupnost. Proběhne záloha dat a kontrola kontejnerů.` : action === 'poweroff' ? 'CM5 se za jednu minutu vypne, včetně NET a dalších služeb. Opětovné zapnutí vyžaduje fyzický zásah nebo samostatný mechanismus probuzení.' : action === 'reboot' ? 'CM5 se za jednu minutu restartuje. Přeruší se všechny služby hostitele, nejen NET.' : 'Zrušení platí jen pro akci, kterou naplánoval NET.'}</p>
       <label>Administrační klíč<input type="password" autoComplete="off" value={credential} disabled={busy} onChange={e => setCredential(e.target.value)} /></label>
-      {action !== 'reboot' && action !== 'poweroff' && <label>Napište {confirmations[action]}<input value={confirmation} disabled={busy} autoComplete="off" onChange={e => setConfirmation(e.target.value)} /></label>}
+      {action === 'cancel-power' && <label>Napište {confirmations[action]}<input value={confirmation} disabled={busy} autoComplete="off" onChange={e => setConfirmation(e.target.value)} /></label>}
       {actionError && <p className="host-warning" role="alert">{actionError}</p>}
       <div className="host-actions"><button disabled={busy} onClick={close}>Zpět</button>
-        {action === 'reboot' || action === 'poweroff' ? <HoldPowerButton key={`${action}:${credential}`} label={busy ? 'Odesílám…' : actionNames[action]} disabled={busy || credential.length < 32 || !!error || !status?.powerAvailable || !!active} onConfirm={() => void perform(action)} /> :
+        {action === 'install' || action === 'reboot' || action === 'poweroff' ? <HoldPowerButton key={`${action}:${credential}`} tone={action === 'install' ? 'install' : 'danger'} label={busy ? 'Odesílám…' : actionNames[action]} disabled={busy || credential.length < 32 || !!error || (action !== 'install' && !status?.powerAvailable) || !!active} onConfirm={() => void perform(action)} /> :
           <button className="host-danger" disabled={busy || credential.length < 32 || confirmation !== confirmations[action]} onClick={() => void perform(action)}>{busy ? 'Odesílám…' : actionNames[action]}</button>}
       </div>
     </div></div>}
+    {showResult && <div className={`update-result-backdrop ${resultState}`}><section className="update-result" role="alertdialog" aria-modal="true" aria-labelledby="update-result-title">
+      <span className="update-result-icon">{resultState === 'succeeded' ? <CircleCheckBig size={30} /> : <CircleX size={30} />}</span>
+      <span className="update-result-kicker">NET {status?.operation.version || 'update'}</span>
+      <h3 id="update-result-title">{resultState === 'succeeded' ? 'Aktualizace úspěšná' : 'Aktualizace neúspěšná'}</h3>
+      <p>{resultState === 'succeeded' ? 'Nová verze je nasazená a služby prošly kontrolou. Obnovte stránku, aby se načetlo aktuální rozhraní.' : 'Původní verze zůstala nebo byla obnovena. Podrobnosti najdete v hostitelském update.log.'}</p>
+      <div className="update-result-actions">
+        {resultState === 'succeeded' && <button className="update-refresh" onClick={() => window.location.reload()}><RefreshCw size={15} /> Obnovit stránku</button>}
+        <button autoFocus className="update-done" onClick={dismissResult}>Hotovo</button>
+      </div>
+    </section></div>}
   </>;
 }

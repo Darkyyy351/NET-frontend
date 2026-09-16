@@ -98,7 +98,7 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
         <button className="ghost-action" disabled={busy || !!active || !status?.available || !!error || status.checking} onClick={() => void perform('check')}><RefreshCw size={15} />{status?.checking ? 'Ověřuji…' : 'Ověřit nyní'}</button>
         <button className="primary" disabled={busy || !!active || tone !== 'available' || !status?.available} onClick={() => open('install')}><Download size={15} /> Instalovat</button>
       </div>
-      <p className="host-caption">Automatická kontrola každých 15 minut. Instalace pouze po potvrzení.</p>
+      <p className="host-caption">Automatická kontrola každých 15 minut. Instalace vyžaduje bezpečnostní potvrzení.</p>
       <div className="update-history">
         <div className="update-history-heading"><Clock3 size={15} /><div><strong>Historie aktualizací</strong><span>Poslední výsledky nasazení</span></div></div>
         <div className="update-history-list">

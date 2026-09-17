@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, LockKeyhole } from 'lucide-react';
 
+const HOLD_DURATION_MS = 3000;
+
 export function HoldPowerButton({ label, disabled, onConfirm, tone = 'danger' }: {
-  label: string; disabled: boolean; onConfirm: () => void; tone?: 'danger' | 'install';
+  label: string; disabled: boolean; onConfirm: () => void; tone?: 'danger' | 'install' | 'cancel';
 }) {
   const [holding, setHolding] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -18,7 +20,7 @@ export function HoldPowerButton({ label, disabled, onConfirm, tone = 'danger' }:
     // Releasing the unlocking hold must never also submit the power action.
     suppressClick.current = true;
     setHolding(true);
-    timer.current = window.setTimeout(() => { timer.current = null; setUnlocked(true); }, 5000);
+    timer.current = window.setTimeout(() => { timer.current = null; setUnlocked(true); }, HOLD_DURATION_MS);
   };
   useEffect(() => {
     const reset = () => { stop(); setUnlocked(false); };
@@ -57,6 +59,6 @@ export function HoldPowerButton({ label, disabled, onConfirm, tone = 'danger' }:
       <path d="M100 1 H192 A7 7 0 0 1 199 8 V40 A7 7 0 0 1 192 47 H8 A7 7 0 0 1 1 40 V8 A7 7 0 0 1 8 1 H100" pathLength="1" />
     </svg>
     {unlocked ? <Check size={16} /> : <LockKeyhole size={16} />}
-    <span className="hold-power-copy"><strong>{label}</strong><small aria-live="polite">{unlocked ? holding ? 'Uvolněte tlačítko' : 'Kliknutím potvrdit' : holding ? 'Podržte…' : 'Podržet 5 sekund'}</small></span>
+    <span className="hold-power-copy"><strong>{label}</strong><small aria-live="polite">{unlocked ? holding ? 'Uvolněte tlačítko' : 'Kliknutím potvrdit' : holding ? 'Podržte…' : 'Podržet 3 sekundy'}</small></span>
   </button>;
 }

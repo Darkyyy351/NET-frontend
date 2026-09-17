@@ -24,6 +24,22 @@ export interface Device {
   pendingCommands: number;
 }
 
+export interface TelemetrySample {
+  at: string;
+  rssi: number;
+  uptimeSeconds: number;
+  freeHeapBytes: number;
+}
+
+export interface TelemetryHistory {
+  sampleIntervalSeconds: number;
+  retentionHours: number;
+  hours: number;
+  from: string;
+  to: string;
+  series: Array<{ deviceId: string; samples: TelemetrySample[]; events: Array<{ at: string; state: 'online' | 'offline' }> }>;
+}
+
 export async function getConnectionRequests(status: 'pending' | 'rejected' = 'pending'): Promise<Device[]> {
   return (await api.get<ApiResponse<Device[]>>('/devices/requests', { params: { status } })).data.data;
 }
@@ -66,6 +82,11 @@ export async function getDevices({ fresh = false }: { fresh?: boolean } = {}): P
 
 export async function addDevice(device: { name: string; ip: string; type: string }) {
   const res = await api.post<ApiResponse<Device>>("/devices", device);
+  return res.data.data;
+}
+
+export async function getTelemetryHistory(hours: 1 | 6 | 24): Promise<TelemetryHistory> {
+  const res = await api.get<ApiResponse<TelemetryHistory>>("/devices/telemetry/history", { params: { hours } });
   return res.data.data;
 }
 

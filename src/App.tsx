@@ -42,6 +42,7 @@ import { AddDevicePanel } from "./components/AddDevicePanel";
 import { BoardCatalog } from './components/BoardCatalog';
 import { DeviceBoardAssignment } from './components/DeviceBoardAssignment';
 import { DevicePurpose } from './components/DevicePurpose';
+import { DeviceTelemetryHistory } from './components/DeviceTelemetryHistory';
 import { ConnectionRequest } from './components/ConnectionRequest';
 import { RejectedDevices } from './components/RejectedDevices';
 import { getConnectionRequests, verifyDevice, type VerificationState } from './api/devices';
@@ -1123,15 +1124,7 @@ export default function App() {
               })}
             </div>
 
-            <div className="future-module-grid">
-              {monitoringModules.map((module) => (
-                <div className="future-module-card" key={module.title}>
-                  <span>{module.value}</span>
-                  <strong>{module.title}</strong>
-                  <p>{module.text}</p>
-                </div>
-              ))}
-            </div>
+            <DeviceTelemetryHistory devices={devices} />
 
             <div className="table-panel">
               <div className="table-title">Live node telemetry</div>
@@ -1148,6 +1141,16 @@ export default function App() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="future-module-grid">
+              {monitoringModules.map((module) => (
+                <div className="future-module-card" key={module.title}>
+                  <span>{module.value}</span>
+                  <strong>{module.title}</strong>
+                  <p>{module.text}</p>
+                </div>
+              ))}
             </div>
           </section>
         )}

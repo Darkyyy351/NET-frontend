@@ -11,6 +11,7 @@ type HostStatus = { available: boolean; powerAvailable: boolean; updateState: st
   history?: UpdateHistoryEntry[] };
 type Action = 'install' | 'reboot' | 'poweroff' | 'cancel-power';
 type PowerDelay = 0 | 1 | 5 | 10;
+type CheckFeedback = { tone: 'success' | 'error'; text: string };
 const labels: Record<string, string> = { current: 'Verze je aktuální', available: 'Dostupná aktualizace',
   unchecked: 'Zatím neověřeno', unavailable: 'Kontrola není dostupná', installing: 'Probíhá instalace' };
 const confirmations: Record<Exclude<Action, 'cancel-power'>, string> = { install: 'UPDATE NET', reboot: 'RESTART CM5', poweroff: 'VYPNOUT CM5' };
@@ -38,6 +39,8 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
   const [status, setStatus] = useState<HostStatus | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [checkingNow, setCheckingNow] = useState(false);
+  const [checkFeedback, setCheckFeedback] = useState<CheckFeedback | null>(null);
   const [action, setAction] = useState<Action | null>(null);
   const [powerDelay, setPowerDelay] = useState<PowerDelay>(1);
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
@@ -75,17 +78,46 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
   };
   const close = () => { if (!busy) { setCredential(''); setAction(null); } };
   const [actionError, setActionError] = useState('');
+  const performCheck = async () => {
+    if (busy) return;
+    const previousCheck = status?.checkedAt;
+    setBusy(true); setCheckingNow(true); setActionError(''); setCheckFeedback(null);
+    try {
+      const response = await api.post<{ data: HostStatus }>('/system/host-control/check', {});
+      let next = response.data.data;
+      setStatus(next); setError('');
+      const deadline = Date.now() + 15_000;
+      while (Date.now() < deadline && (next.checking || next.checkedAt === previousCheck)) {
+        await new Promise(resolve => window.setTimeout(resolve, 450));
+        const refreshed = await api.get<{ data: HostStatus }>('/system/host-control');
+        next = refreshed.data.data;
+        setStatus(next);
+        if (!next.checking && next.error) break;
+      }
+      if (next.error) {
+        setCheckFeedback({ tone: 'error', text: 'Kontrola aktualizací selhala. Poslední ověřená verze zůstává zachovaná.' });
+      } else if (next.checkedAt !== previousCheck) {
+        setCheckFeedback({ tone: 'success', text: next.updateState === 'available'
+          ? `Kontrola dokončena. NET ${next.release?.version || ''} je připravený k instalaci.`
+          : 'Kontrola dokončena. Používáte aktuální verzi NET.' });
+      } else {
+        setCheckFeedback({ tone: 'error', text: 'Hostitel kontrolu nespustil. Aktualizujte a znovu nainstalujte NET host helper.' });
+      }
+    } catch {
+      setCheckFeedback({ tone: 'error', text: 'Kontrolu se nepodařilo dokončit. Ověřte spojení s CM5 a stav host helperu.' });
+    } finally {
+      setBusy(false); setCheckingNow(false);
+    }
+  };
   const perform = async (target: Action | 'check') => {
+    if (target === 'check') { await performCheck(); return; }
     if (busy) return;
     setBusy(true); setActionError('');
     try {
-      const body: Record<string, unknown> = {};
-      if (target !== 'check') {
-        body.credential = credential;
-        if (target !== 'cancel-power') body.confirmation = confirmations[target];
-        if (target === 'install') Object.assign(body, selectedRelease || {});
-        if (target === 'reboot' || target === 'poweroff') body.delayMinutes = powerDelay;
-      }
+      const body: Record<string, unknown> = { credential };
+      if (target !== 'cancel-power') body.confirmation = confirmations[target];
+      if (target === 'install') Object.assign(body, selectedRelease || {});
+      if (target === 'reboot' || target === 'poweroff') body.delayMinutes = powerDelay;
       const response = await api.post<{ data: HostStatus }>(`/system/host-control/${target}`, body);
       setStatus(response.data.data); setError(''); setAction(null);
     } catch {
@@ -127,8 +159,11 @@ export function HostManagement({ children }: { children: (panels: { updates: Rea
       {status?.release && <ul className="release-notes">{status.release.notes.map((note, index) => <li key={index}>{note}</li>)}</ul>}
       {(error || status?.error) && <p className="host-warning" role="status">{error || status?.error}</p>}
       {!status?.available && <p className="host-warning">Hostitelský pomocník není připojený. Jednorázová instalace na CM5 je nutná.</p>}
+      {checkFeedback && <p className={`host-check-result ${checkFeedback.tone}`} role="status">
+        {checkFeedback.tone === 'success' ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}{checkFeedback.text}
+      </p>}
       <div className="host-actions">
-        <button className="ghost-action" disabled={busy || !!active || !status?.available || !!error || status.checking} onClick={() => void perform('check')}><RefreshCw size={15} />{status?.checking ? 'Ověřuji…' : 'Ověřit nyní'}</button>
+        <button className="ghost-action" disabled={busy || !!active || !status?.available || !!error || status.checking} onClick={() => void perform('check')}><RefreshCw className={checkingNow || status?.checking ? 'checking-spin' : ''} size={15} />{checkingNow || status?.checking ? 'Ověřuji…' : 'Ověřit nyní'}</button>
         <button className="primary" disabled={busy || !!active || tone !== 'available' || !status?.available} onClick={() => open('install')}><Download size={15} /> Instalovat</button>
       </div>
       <p className="host-caption">Automatická kontrola každých 15 minut. Instalace pouze po potvrzení.</p>
